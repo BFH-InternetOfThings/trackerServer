@@ -1,0 +1,11 @@
+{
+    "name": "simpleServer",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "start": "node tcpsrv.js"
+    },
+    "dependencies": {
+        "binary-parser": "*"
+    }
+}
