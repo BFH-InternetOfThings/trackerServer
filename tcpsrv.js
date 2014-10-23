@@ -8,7 +8,7 @@ var Parser = require('binary-parser').Parser;
 var readline = require('readline');
 
 var rl = readline.createInterface(process.stdin, process.stdout);
-rl.setPrompt('send to trackers> ');
+rl.setPrompt('cmd> ');
 
 var atDateTime = new Parser()
     .endianess('big')
@@ -115,13 +115,14 @@ var commandObject = function(command, newValue, callback) {
 // Send a message to all clients
 function broadcast(message) {
     clients.forEach(function (client) {
+        console.log("--> send " + message + " to client " + client.name);
         // only send if inital Handshake is done, otherwise the tracker won't answer the query
-        if (client.isTrackerHandshakeDone == true) {
+        if (client.isASCIIFormat != null) {
             if(client.isASCIIFormat == true) {
                 client.write(message);
             }
             else {
-                client.sendBinaryCommand(1, message);
+                client.sendBinaryCommand(message);
             }
         }
     });
@@ -132,14 +133,11 @@ net.createServer(function (socket) {
 
     // Identify this client
     socket.name = socket.remoteAddress + ":" + socket.remotePort;
-    socket.isInitHandshakeDone = false;
-    socket.isASCIIFormat = false;
+    //socket.isInitHandshakeDone = false;
+    socket.isASCIIFormat = null;
     socket.currentCommand = null;
     socket.commandQueue = [];
-
-    // Put this new client in the list
-    clients.push(socket);
-    console.log('client ' + socket.name + ' connected!');
+    socket.lastTransactionID = 0;
 
     socket.sendBinaryAcknowledge = function(transactionID, success) {
         var ackBuffer = new Buffer(6);
@@ -148,19 +146,18 @@ net.createServer(function (socket) {
         ackBuffer.writeUInt8(0x03, 3);
         ackBuffer.writeUInt16BE( ( success ? 0x0000 : 0x0001 ), 4);
 
+
+
         socket.write(ackBuffer);
     };
 
-    socket.sendBinaryCommand = function(transactionID, commandstring) {
+    socket.sendBinaryCommand = function(commandstring) {
         var buf = new Buffer(6 + commandstring.length);
-        buf.writeUInt16BE(transactionID, 0);
+        buf.writeUInt16BE(socket.lastTransactionID + 1, 0);
         buf.writeUInt8(0x01, 2);
         buf.writeUInt8(0x00, 3);
         buf.writeUInt16BE( commandstring.length, 4);
         buf.write( commandstring, 6, commandstring.length, 'ascii');
-
-        console.log(buf);
-
         socket.write(buf);
     };
 
@@ -181,7 +178,7 @@ net.createServer(function (socket) {
             // answer handshake
             socket.write(data);
 
-            socket.isInitHandshakeDone = true;
+            //socket.isInitHandshakeDone = true;
             socket.isASCIIFormat = true;
             console.log("Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
             return;
@@ -207,6 +204,8 @@ net.createServer(function (socket) {
         }
 
         console.log(packet);
+
+        socket.lastTransactionID = packet.transactionID;
 
         // Check for async answer
         if(packet.messageType == 0x02) {
@@ -249,6 +248,9 @@ net.createServer(function (socket) {
         console.log('client' + socket.name + ' disconnected!');
     });
 
+    // Put this new client in the list
+    clients.push(socket);
+    console.log('client ' + socket.name + ' connected!');
 
 }).listen(9090);
 
@@ -257,8 +259,6 @@ console.log("Tissan Tracker server running at port 9090\n");
 
 
 rl.on('line', function(line) {
-
-    console.log(line);
 
     if (line === "exit") {
         rl.close();
