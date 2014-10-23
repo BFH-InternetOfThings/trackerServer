@@ -145,7 +145,7 @@ net.createServer(function (socket) {
 
 
 
-        process.stdout.write(data);
+        //process.stdout.write(data);
 
 
 
