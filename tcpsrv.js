@@ -29,6 +29,8 @@ var atAsyncGPSMessage = new Parser()
     .nest('gps', { type: atDateTime }) // gps date
     .int32('latitude') // 0.00001 degree units
     .int32('longitude') // 0.00001 degree units
+    .uint8('altitude1')
+    .int16('altitude2')
     .uint16('speed') // 0.1 meters per second units
     .uint16('direction') // 0.1 degree units
     .uint32('odometer') // meter units - see AT$ODO command
@@ -146,8 +148,6 @@ net.createServer(function (socket) {
         ackBuffer.writeUInt8(0x03, 3);
         ackBuffer.writeUInt16BE( ( success ? 0x0000 : 0x0001 ), 4);
 
-
-
         socket.write(ackBuffer);
     };
 
@@ -187,23 +187,17 @@ net.createServer(function (socket) {
             socket.isASCIIFormat = false;
         }
 
-
         // Binary format
-
-        //console.log(data);
         try {
             var packet = atBinaryResponsePacket.parse(data);
         }
         catch(err) {
             console.log(err);
-
-            // binary data analysis failed, check if we use the correct format
-            //socket.write('at$format?');
-
-            return
+            socket.sendBinaryAcknowledge(packet.transactionID, false);
+            return;
         }
 
-        console.log(packet);
+        console.log(packet.message);
 
         socket.lastTransactionID = packet.transactionID;
 
@@ -214,30 +208,6 @@ net.createServer(function (socket) {
         }
 
         rl.prompt();
-
-
-
-        /*
-        if( data.length == 8 ) { // acknowledge message
-            ackPacket = atFormatASCIIAcknowledge.parse(data);
-            //console.log(data);
-            if( ackPacket.header1 == 250 && ackPacket.header2 == 248) { // check for ASCII Header detection
-                // answer heartbeat
-                socket.write(data);
-                socket.isTrackerHandshakeDone = true;
-                console.log("Heartbeat no. " + ackPacket.sequenceID + " from modem id " + ackPacket.modemID + " received!");
-                return;
-            }
-        } */
-
-        // check for async GPS Position message
-        // format:
-
-
-
-        //process.stdout.write(data);
-
-
 
 
     });
