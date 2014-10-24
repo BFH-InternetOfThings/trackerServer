@@ -193,7 +193,8 @@ net.createServer(function (socket) {
         }
         catch(err) {
             console.log(err);
-            socket.sendBinaryAcknowledge(packet.transactionID, false);
+            console.log(data);
+            socket.sendBinaryAcknowledge(data.readUInt16BE(0), false);
             return;
         }
 
