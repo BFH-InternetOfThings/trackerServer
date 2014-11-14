@@ -6,7 +6,7 @@
 var net = require('net');
 var atFormat = require('./atformat');
 var debug = require('debug')('atFormatTCPSrv');
-
+var S = require('string');
 
 // Start a TCP Server
 module.exports = net.createServer(function (socket) {
@@ -20,19 +20,24 @@ module.exports = net.createServer(function (socket) {
     socket.lastTransactionID = 0;
 
 
-    socket.sendCommand = function(command) {
+    socket.sendCommand = function(command, newValue, callback) {
+
         if(command) {
-            socket.commandQueue.push(command);
+            socket.commandQueue.push(new atFormat.AtCommand(command.toString(), newValue, callback));
         }
+
+        console.log(socket.commandQueue);
 
         if(!socket.commandQueue || socket.commandQueue.length == 0) {
             return;
         }
 
-        if(!socket.isASCIIFormat) {
+        if(!socket.trackerID) {
             // do not send a command until the initial handshake is done
             return;
         }
+
+
 
         var commandObject = socket.commandQueue[0];
 
@@ -42,12 +47,14 @@ module.exports = net.createServer(function (socket) {
             return;
         }
 
-
         commandObject.setStatusSent();
         if(socket.isASCIIFormat) {
+            console.log(commandObject.getCommandString());
             socket.write(commandObject.getCommandString());
         }
         else {
+            console.log(commandObject.getCommandString());
+            console.log(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
             socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
         }
     };
@@ -168,13 +175,13 @@ module.exports = net.createServer(function (socket) {
                 return;
             }
 
-            debug(packet.message);
+            //console.log(packet.message);
 
             socket.lastTransactionID = packet.transactionID;
 
             switch(packet.messageEncoding) {
                 case 0x00: //atFormat.atAsyncStatusMessage,
-                    if(packet.message.messageID == 0xAB) {
+                    if (packet.message.messageID == 0xAB) {
                         // heartbeat
                         debug("Heartbeat no. " + packet.transactionID + " from modem id " + packet.message.modemID2 + " received!");
                     }
@@ -196,9 +203,31 @@ module.exports = net.createServer(function (socket) {
                     break;
                 case 0x01: //atFormat.atCommandResponse,
 
-                    // command is complete, remove it from list
-                    socket._quitCommands(0, 1);
+                    var stringData = packet.message.messageData;
+                    console.log(stringData);
 
+                    var lines = stringData.replace('\r\n', '\n').replace('\r', '\n').split("\n");
+
+                    if (socket.commandQueue.length == 0) {
+                        var line1 = S(lines[0]);
+                        var line2 = S(lines[1]);
+                        if (line1.startsWith("OK:MODID") && line2.startsWith("$MODID=")) {
+                            socket.trackerID = line2.substring(7).toInteger();
+                        }
+                        else {
+
+                        }
+                    }
+                    else {
+                            socket.commandQueue[0].parseCommandHeader(lines[0]);
+
+                            for (var j = 1; j < lines.length; j++) {
+                                socket.commandQueue[0].parseCommandData(lines[j]);
+                            }
+
+                            // command is complete, remove it from list
+                            socket._quitCommands(0, 1);
+                    }
 
                     break;
                 case 0x02: //atFormat.atAsyncTextMessage,
@@ -219,18 +248,18 @@ module.exports = net.createServer(function (socket) {
         }
     });
 
-
-
     // Remove the client from the list when it leaves
     socket.on('end', function () {
         module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
         console.log('client' + socket.name + ' disconnected!');
     });
 
-
-
     // Put this new client in the list
     module.exports.clients.push(socket);
+
+    // check the mod id
+    socket.write("AT$MODID?");
+
 
     module.exports.emit("trackerConnected", socket);
 });

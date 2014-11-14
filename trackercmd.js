@@ -80,7 +80,7 @@ trackertcpsrv.on('trackerConnected', function(tracker) {
 });
 
 trackertcpsrv.on('gpsDataReceived', function(tracker, gps) {
-    console.log('Tracker ' + tracker.name + " sent GPS: ", gps);
+    console.log('Tracker ' + tracker.trackerID + " sent GPS: ", gps);
 });
 
 trackertcpsrv.listen(config.port, function(err) {
