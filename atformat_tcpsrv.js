@@ -1,5 +1,5 @@
 /**
- * Created by roger.jaggi on 22.10.2014.
+ * Created by Roger Jaggi on 22.10.2014.
  */
 
 // Load the TCP Library
@@ -18,17 +18,17 @@ module.exports = net.createServer(function (socket) {
     socket.lastTransactionID = 0;
 
 
-    socket.sendCommand = function(command, newValue, callback) {
+    socket.sendCommand = function (command, newValue, callback) {
 
         var newCommand = new atFormat.AtCommand(command, newValue, callback);
 
-        if(!socket.trackerID ) {
+        if (!socket.trackerID) {
             // do not send a command until the initial handshake is done
             newCommand.callCallback(socket);
 
             command = "MODID";
-            newCommand = new atFormat.AtCommand(command, "", function(err, tracker, response) {
-                if(err) {
+            newCommand = new atFormat.AtCommand(command, "", function (err, tracker, response) {
+                if (err) {
                     console.log(err);
                 }
                 else {
@@ -38,25 +38,26 @@ module.exports = net.createServer(function (socket) {
             });
         }
 
-        if(command) {
+        // TODO: Refactor useless command-is-empty query instead of newCommand query, dahaa
+        if (command) {
             socket.commandQueue.push(newCommand);
         }
 
-        if(socket.commandQueue.length == 0) {
+        if (socket.commandQueue.length == 0) {
             // return on empty queue
             return;
         }
 
         var commandObject = socket.commandQueue[0];
 
-        if(commandObject.sentTime) {
+        if (commandObject.sentTime) {
             // Currently a command is executing, wait until that command finishes
-            // TODO: Add Timeout handling for 10 seconds, this also needs an additonal timer who checks for responses within 10s
+            // TODO: Add Timeout handling for 10 seconds, this also needs an additional timer who checks for responses within 10s
             return;
         }
 
         commandObject.setStatusSent();
-        if(socket.isASCIIFormat) {
+        if (socket.isASCIIFormat) {
             socket.write(commandObject.getCommandString());
         }
         else {
@@ -64,11 +65,11 @@ module.exports = net.createServer(function (socket) {
         }
     };
 
-    socket._quitCommands = function(startIndex, count) {
+    socket._quitCommands = function (startIndex, count) {
         // it it is not the first command, all commands before it failed. Remove then and call their callbacks
         var commands = socket.commandQueue.splice(startIndex, count);
 
-        for(var i = 0; i < commands.length; i++) {
+        for (var i = 0; i < commands.length; i++) {
             commands[i].callCallback(socket);
         }
 
@@ -76,26 +77,25 @@ module.exports = net.createServer(function (socket) {
         socket.sendCommand();
     };
 
-    socket._processDataLine = function(line) {
+    socket._processDataLine = function (line) {
 
-        if(S(line).isEmpty()) return;
+        if (S(line).isEmpty()) return;
 
-
-        if(socket.commandQueue.length > 0) {
-
-            for(var i = 0; i < socket.commandQueue.length; i++) {
-                switch(socket.commandQueue[0].parseLine(line)) {
+        if (socket.commandQueue.length > 0) {
+            for (var i = 0; i < socket.commandQueue.length; i++) {
+                switch (socket.commandQueue[0].parseLine(line)) {
                     case atFormat.ATCommandReturnCode.AWAIT_MORE_DATA:
                         return;
 
                     case atFormat.ATCommandReturnCode.SUCCESSFULLY_FINISHED:
-                        socket._quitCommands(0, i+1);
+                        socket._quitCommands(0, i + 1);
                         return;
 
                     case atFormat.ATCommandReturnCode.WRONG_COMMAND:
                         break;
 
-                    case atFormat.ATCommandReturnCode.UNKNOWN_DATA:
+                    case atFormat.ATCommandReturnCode.UNKNOWN_DATA: // Fall through default
+
                     default:
                         i = socket.commandQueue.length; // break the loop
                 }
@@ -108,19 +108,19 @@ module.exports = net.createServer(function (socket) {
         // async Data like GPS, etc.
         result = atFormat.parseASCII_TXT(line);
         if (result != null) {
-            socket.emit('TxtDataReceived', socket, result);
+            module.exports.emit('TxtDataReceived', socket, result);
             return;
         }
 
         result = atFormat.parseASCII_Garmin(line);
         if (result != null) {
-            socket.emit('GarminDataReceived', socket, result);
+            module.exports.emit('GarminDataReceived', socket, result);
             return;
         }
 
         result = atFormat.parseASCII_OBD(line);
         if (result != null) {
-            socket.emit('OBDDataReceived', socket, result);
+            module.exports.emit('OBDDataReceived', socket, result);
             return;
         }
 
@@ -138,7 +138,7 @@ module.exports = net.createServer(function (socket) {
     socket.on('data', function (data) {
 
         // check for ASCII Heartbeat Message
-        if(data.readUInt16BE(0) == 0xfaf8) {
+        if (data.readUInt16BE(0) == 0xfaf8) {
             try {
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
 
@@ -149,8 +149,8 @@ module.exports = net.createServer(function (socket) {
                 debug("ASCII Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
                 return;
             }
-            catch(err) {
-                debug(err,data);
+            catch (err) {
+                debug(err, data);
             }
         }
 
@@ -161,7 +161,7 @@ module.exports = net.createServer(function (socket) {
             socket.isASCIIFormat = false;
             socket.lastTransactionID = packet.transactionID;
         }
-        catch(err) {
+        catch (err) {
             console.log(err);
 
             // Process ASCII Message
@@ -171,7 +171,7 @@ module.exports = net.createServer(function (socket) {
         }
 
         // Process Binary Message
-        switch(packet.messageEncoding) {
+        switch (packet.messageEncoding) {
             case 0x00: //atFormat.atAsyncStatusMessage,
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
@@ -184,9 +184,10 @@ module.exports = net.createServer(function (socket) {
                         gpstime: atFormat.getMomentFromBinaryObject(packet.message.data.gps).toDate(),
                         latitude: packet.message.data.latitude / 100000,
                         longitude: packet.message.data.longitude / 100000,
+                        //TODO: Proper implement 24-bit integer data type
                         altitude: packet.message.data.altitude2,
-                        speed: packet.message.data.speed,
-                        direction: packet.message.data.direction,
+                        speed: packet.message.data.speed / 10,
+                        direction: packet.message.data.direction / 10,
                         satelliteCount: packet.message.data.satelliteCount
                     };
 
@@ -200,8 +201,8 @@ module.exports = net.createServer(function (socket) {
                 for (var j = 0; j < lines.length; j++) {
                     socket._processDataLine(lines[j]);
                 }
-
                 break;
+
             case 0x02: //atFormat.atAsyncTextMessage, // Text
 
                 var txtObj = {
@@ -210,7 +211,7 @@ module.exports = net.createServer(function (socket) {
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
                 };
 
-                socket.emit('TxtDataReceived', socket, txtObj);
+                module.exports.emit('TxtDataReceived', socket, txtObj);
                 return;
 
             case 0x03: //atFormat.atAsyncTextMessage, // Garmin
@@ -221,8 +222,9 @@ module.exports = net.createServer(function (socket) {
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
                 };
 
-                socket.emit('GarminDataReceived', socket, txtObj);
+                module.exports.emit('GarminDataReceived', socket, txtObj);
                 return;
+
             case 0x04: //atFormat.atAsyncTextMessage  // OBD
 
                 var txtObj = {
@@ -231,12 +233,12 @@ module.exports = net.createServer(function (socket) {
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
                 };
 
-                socket.emit('OBDDataReceived', socket, txtObj);
+                module.exports.emit('OBDDataReceived', socket, txtObj);
                 return;
         }
 
         // Acknowledge async messages
-        if(packet.messageType == 0x02) {
+        if (packet.messageType == 0x02) {
             // answer async message with acknowledge
             socket.write(atFormat.generateBinaryAcknowledge(packet.transactionID, true));
         }
@@ -252,29 +254,20 @@ module.exports = net.createServer(function (socket) {
     module.exports.clients.push(socket);
 
     // get the Tracker id
-    socket.sendCommand(); /*"", "", function(err, tracker, response) {
-        if(err) {
-            console.log(err);
-        }
-        else {
-            socket.trackerID = response[0];
-            module.exports.emit("trackerConnected", socket);
-        }
-    }); */
+    socket.sendCommand();
+
 });
 
 module.exports.clients = [];
 
 
-module.exports.sendCommand = function(trackerID, command, newValue, callback) {
+module.exports.sendCommand = function (trackerID, command, newValue, callback) {
 
-    for(var i = 0; i < module.exports.clients.length; i++) {
+    for (var i = 0; i < module.exports.clients.length; i++) {
         var client = module.exports.clients[i];
-        if(client.trackerID) {
-            if(client.trackerID === trackerID) {
-                client.sendCommand(command, newValue, callback);
-                return;
-            }
+        if (client.trackerID && client.trackerID === trackerID) {
+            client.sendCommand(command, newValue, callback);
+            return;
         }
     }
 

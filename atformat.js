@@ -1,5 +1,5 @@
 /**
- * Created by roger.jaggi on 05.11.2014.
+ * Created by Roger Jaggi on 05.11.2014.
  */
 var Parser = require('binary-parser').Parser;
 var S = require('string');
@@ -145,7 +145,7 @@ atFormat.parseASCII_GPS = function(gpsstring) {
 
     if(GPSData.length == 15) {
 
-
+        //TODO: Code it
 
         return true;
     }
@@ -158,7 +158,7 @@ atFormat.parseASCII_TXT = function(responseString) {
 
     //$SNDTXT:< Modem_ID >,<Text data>,<RTC time>0x0d0x0a
     if(response.startsWith("$SNDTXT:")) {
-
+        //TODO: Code it
 
         return true;
     }
@@ -171,7 +171,7 @@ atFormat.parseASCII_Garmin = function(responseString) {
 
     //$SNDGA:<Garmin data>0x0d0x0a
     if(response.startsWith("$SNDGA:")) {
-
+        //TODO: Code it
 
         return true;
     }
@@ -184,7 +184,7 @@ atFormat.parseASCII_OBD = function(responseString) {
 
     //$SNDOBD:<Modem_ID>,<Longitude>,<Latitude>,<OBD response>,<RTC time>0x0d0x0a
     if(response.startsWith("$SNDOBD:")) {
-
+        //TODO: Code it
 
         return true;
     }
@@ -192,9 +192,6 @@ atFormat.parseASCII_OBD = function(responseString) {
     return null;
 };
 
-atFormat.parseAsyncASCII = function(dataString) {
-
-};
 
 // Type Zero = zero data line, only command response line
 atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","WIRETAP","CALL","ANSWER","HANGUP","SNDTXT","SPSNDTXT", "CODE","SNDGA" ];
@@ -202,8 +199,8 @@ atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","W
 // Type One = One Data line for question, only command response line on error or for set
 atFormat.typeOneCommands = ["MODID","PIN","APN","SMSDST","SMSLST","LSTLIMIT","SMSCFG","GPRSEN","IPTYPE", "BAND","POLC","GSMJDC","FORMAT","HB","RETRY","NETCFG", "PACKAGE", "BAUD","FILTER","ODO","URL","GPSPT","PKEY","OKEY","DNS","MSGQ", "VEXT", "VBAT", "VERSION", "QUST","IMEI","IP","SMID","SIMID","PWRM","MIC","SPK","SPKMUTE","VOICE","ICL","OGL","RFIDC","IDRM","IBDETEN","TAG","FUEL","SNDOBD", "OBDEN", "OBDRPT","OBDGDTC","GAFUN","GADETEN","GETPDS","PDSR","LPRC","IN1","IN1EN","IGN","IGNEN","EGN","EGNEN","SPEED", "SPEEDEN","GF", "GFEN", "POWER", "GPSMON"  ];
 
-// Type List = Multiple Line for questions, only command response line on error or for set
-atFormat.typeListCommands = ["HOSTS","POL","SCHED","RFLC"];
+// Type List = Ten Lines for questions, only command response line on error or for set
+atFormat.typeTenLineCommands = ["HOSTS","POL","SCHED","RFLC"];
 
 atFormat.ATCommandReturnCode = {
     AWAIT_MORE_DATA: 2,
@@ -239,11 +236,15 @@ atFormat.AtCommand = function(command, newValue, callback) {
         }
     }
 
-    for(i = 0; i < atFormat.typeListCommands.length && !found; i++) {
-        if(atFormat.typeListCommands[i] === self.command) {
+    for(i = 0; i < atFormat.typeTenLineCommands.length && !found; i++) {
+        if(atFormat.typeTenLineCommands[i] === self.command) {
             self.outstandingLineCount = 11;
             found = true;
         }
+    }
+
+    if(!found) {
+        command = "";
     }
 
     this.getCommandString = function() {
