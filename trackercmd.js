@@ -17,7 +17,7 @@ rl.on('line', function(line) {
 
     var data = S(line);
 
-    switch (true){
+    switch(true) {
         case data.startsWith("exit"):
             rl.close();
             break;
@@ -27,7 +27,7 @@ rl.on('line', function(line) {
             for(var i = 1; i <= trackertcpsrv.clients.length; i++) {
                 clientList += trackertcpsrv.clients[i-1].trackerID + ", ";
             }
-            console.log(trackertcpsrv.clients.length + " Clients are connected: " + clientList.substring(0, clientList.length - 2));
+            console.log(trackertcpsrv.clients.length +" Clients are connected: " + clientList.substring(0, clientList.length - 2));
 
             rl.prompt();
             break;
@@ -50,7 +50,7 @@ rl.on('line', function(line) {
                     }
             }
 
-            // 1001 VBAT
+            // Example: 1001 VBAT
             trackertcpsrv.sendCommand(parts[0],parts[1],parts[2], function(err, tracker, response) {
                 if(err) {
                     console.log(err);
