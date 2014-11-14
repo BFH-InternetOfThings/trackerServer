@@ -222,14 +222,18 @@ atFormat.AtCommand = function(command, newValue, callback) {
     this.callback = callback;
 
     this.getCommandString = function() {
+        var commandString = '';
+
         if (command && command != '') {
             if (newValue == undefined || newValue == null || newValue == '') {
-                this.commandString = "AT$" + command + "?\n";
+                commandString = "AT$" + command + "?\n";
             }
             else {
-                this.commandString = "AT$" + command + "=" + newValue + "\n";
+                commandString = "AT$" + command + "=" + newValue + "\n";
             }
         }
+
+        return commandString;
     };
 
     this.setStatusSent = function() {
@@ -249,6 +253,11 @@ atFormat.AtCommand = function(command, newValue, callback) {
     // return true if one more line is expected, otherwise false
     this.parseCommandHeader = function(headerString)
     {
+        var header = S(headerString);
+
+        if(header.startsWith("OK:")) {
+            //TODO
+        }
 
         return this.outstandingLineCount == 0;
     };

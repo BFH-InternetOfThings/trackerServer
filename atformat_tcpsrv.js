@@ -26,8 +26,6 @@ module.exports = net.createServer(function (socket) {
             socket.commandQueue.push(new atFormat.AtCommand(command.toString(), newValue, callback));
         }
 
-        console.log(socket.commandQueue);
-
         if(!socket.commandQueue || socket.commandQueue.length == 0) {
             return;
         }
@@ -36,8 +34,6 @@ module.exports = net.createServer(function (socket) {
             // do not send a command until the initial handshake is done
             return;
         }
-
-
 
         var commandObject = socket.commandQueue[0];
 
@@ -49,12 +45,9 @@ module.exports = net.createServer(function (socket) {
 
         commandObject.setStatusSent();
         if(socket.isASCIIFormat) {
-            console.log(commandObject.getCommandString());
             socket.write(commandObject.getCommandString());
         }
         else {
-            console.log(commandObject.getCommandString());
-            console.log(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
             socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
         }
     };
