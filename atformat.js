@@ -2,6 +2,7 @@
  * Created by roger.jaggi on 05.11.2014.
  */
 var Parser = require('binary-parser').Parser;
+var S = require('string');
 
 var atFormat = {};
 
@@ -99,6 +100,16 @@ atFormat.atBinaryResponsePacket = new Parser()
  }
  }); */
 
+// Type Zero = zero data line, only command response line
+atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","WIRETAP","CALL","ANSWER","HANGUP","SNDTXT","SPSNDTXT", "CODE","SNDGA", ];
+
+// Type One = One Data line for question, only command response line on error or for set
+atFormat.typeOneCommands = ["MODID","PIN","APN","SMSDST","SMSLST","LSTLIMIT","SMSCFG","GPRSEN","IPTYPE", "BAND","POLC","GSMJDC","FORMAT","HB","RETRY","NETCFG", "PACKAGE", "BAUD","FILTER","ODO","URL","GPSPT","PKEY","OKEY","DNS","MSGQ", "VEXT", "VBAT", "VERSION", "QUST","IMEI","IP","SMID","SIMID","PWRM","MIC","SPK","SPKMUTE","VOICE","ICL","OGL","RFIDC","IDRM","IBDETEN","TAG","FUEL","SNDOBD", "OBDEN", "OBDRPT","OBDGDTC","GAFUN","GADETEN","GETPDS","PDSR","LPRC","IN1","IN1EN","IGN","IGNEN","EGN","EGNEN","SPEED", "SPEEDEN","GF", "GFEN", "POWER", "GPSMON",  ];
+
+// Type List = Multiple Line for questions, only command response line on error or for set
+atFormat.typeListCommands = ["HOSTS","POL","SCHED","RFLC"];
+
+
 atFormat.generateBinaryAcknowledge = function(transactionID, success) {
     var ackBuffer = new Buffer(6);
     ackBuffer.writeUInt16BE(transactionID, 0);
@@ -119,5 +130,128 @@ atFormat.generateBinaryCommandRequest = function(transactionID, commandString) {
 
     return buf;
 };
+
+atFormat.getASCIICommandResponse = function(responseString) {
+    var response = S(responseString);
+
+    if(response.startsWith("OK:")) {
+        return response.substring(3);
+
+    }
+
+    if(response.startsWith('ERROR:')) {
+        return response.substring(6)
+    }
+
+    return null;
+};
+
+atFormat.parseASCII_GPS = function(gpsstring) {
+    //<Modem_ID>,<GPS_DateTime>,<Longitude>,<Latitude>,<Speed>,<Direction>,<Altitude>,<Satellites>,<Message ID>,<Input Status>,<Output Status>,<Analog Input1>,<Analog Input2>,<RTC_DateTime>,<Mileage>
+
+    var GPSData = S(gpsstring).parseCSV(',', null);
+
+    if(GPSData.length == 15) {
+
+
+
+        return true;
+    }
+
+    return null;
+};
+
+atFormat.parseASCII_TXT = function(responseString) {
+    var response = S(responseString);
+
+    //$SNDTXT:< Modem_ID >,<Text data>,<RTC time>0x0d0x0a
+    if(response.startsWith("$SNDTXT:")) {
+
+
+        return true;
+    }
+
+    return null;
+};
+
+atFormat.parseASCII_Garmin = function(responseString) {
+    var response = S(responseString);
+
+    //$SNDGA:<Garmin data>0x0d0x0a
+    if(response.startsWith("$SNDGA:")) {
+
+
+        return true;
+    }
+
+    return null;
+};
+
+atFormat.parseASCII_OBD = function(responseString) {
+    var response = S(responseString);
+
+    //$SNDOBD:<Modem_ID>,<Longitude>,<Latitude>,<OBD response>,<RTC time>0x0d0x0a
+    if(response.startsWith("$SNDOBD:")) {
+
+
+        return true;
+    }
+
+    return null;
+};
+
+atFormat.parseAsyncASCII = function(dataString) {
+
+};
+
+atFormat.AtCommand = function(command, newValue, callback) {
+
+    this.command = command;
+    this.sentTime = null;
+    this.responseCommand = '';
+    this.responseData = '';
+    this.outstandingLineCount = 0;
+    this.result = false;
+    this.response = null;
+    this.callback = callback;
+
+    this.getCommandString = function() {
+        if (command && command != '') {
+            if (newValue == undefined || newValue == null || newValue == '') {
+                this.commandString = "AT$" + command + "?\n";
+            }
+            else {
+                this.commandString = "AT$" + command + "=" + newValue + "\n";
+            }
+        }
+    };
+
+    this.setStatusSent = function() {
+        this.sentTime = true;
+    };
+
+    this.callCallback = function() {
+        this.outstandingLineCount = 0;
+        if(this.result) {
+            this.callback(null, this.response);
+        }
+        else {
+            this.callback(new Error("Tracker returned error for command" + this.command));
+        }
+    };
+
+    // return true if one more line is expected, otherwise false
+    this.parseCommandHeader = function(headerString)
+    {
+
+        return this.outstandingLineCount == 0;
+    };
+
+    // return true if one more line is expected, otherwise false
+    this.parseCommandData = function(dataString) {
+
+        return this.outstandingLineCount == 0;
+    };
+}
 
 module.exports = atFormat;

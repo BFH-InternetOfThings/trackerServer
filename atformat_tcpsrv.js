@@ -6,6 +6,9 @@
 var net = require('net');
 var atFormat = require('atformat');
 
+
+
+
 // Start a TCP Server
 module.exports = net.createServer(function (socket) {
 
@@ -13,30 +16,16 @@ module.exports = net.createServer(function (socket) {
     socket.name = socket.remoteAddress + ":" + socket.remotePort;
     //socket.isInitHandshakeDone = false;
     socket.isASCIIFormat = null;
-    socket.currentCommand = null;
     socket.trackerID = null;
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
 
-    socket.registerCommand = function(command, newValue, callback) {
-        if(!command || command == '') {
-            callback('empty command');
+
+    socket.sendCommand = function(command) {
+        if(command) {
+            socket.commandQueue.push(command);
         }
 
-        var commandString = '';
-        if(newValue == undefined || newValue == null || newValue == '') {
-            commandString = "at$" + command + "?\n";
-        }
-        else {
-            commandString = "at$" + command + "=" + newValue + "\n";
-        }
-
-        socket.commandQueue.push({ commandString: commandString, callback: callback, sentTime: null });
-
-        socket._sendCommandFromQueue();
-    };
-
-    socket._sendCommandFromQueue = function() {
         if(!socket.commandQueue || socket.commandQueue.length == 0) {
             return;
         }
@@ -53,19 +42,30 @@ module.exports = net.createServer(function (socket) {
             // TODO: Add Timeout handling for 10 seconds, this also needs an additonal timer who checks for responses within 10s
             return;
         }
-        commandObject.sentTime = true;
 
+
+        commandObject.setStatusSent();
         if(socket.isASCIIFormat) {
-            socket.write(commandObject.commandString);
+            socket.write(commandObject.getCommandString());
         }
         else {
-            socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.commandString));
+            socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
+        }
+    };
+
+    socket._quitCommands = function(startIndex, count) {
+        // it it is not the first command, all commands before it failed. Remove then and call their callbacks
+        var commands = socket.commandQueue.splice(startIndex, count);
+
+        for(var i = 0; i < commands.length; i++) {
+            commands[i].callCallback();
         }
     };
 
     // Handle incoming messages from clients.
     socket.on('data', function (data) {
 
+        // check for ASCII Heartbeat Message
         if(data.readUInt16BE(0) == 0xfaf8) {
             try {
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
@@ -85,11 +85,75 @@ module.exports = net.createServer(function (socket) {
 
         if(socket.isASCIIFormat) { // parse ascii format
 
-            //var string = data.read
-            process.stdout.write(data);
+            var dataString = data.toString('ascii');
 
-            // prompt for a new command for the tracker
-            //rl.prompt();
+            if(socket.commandQueue.length > 0 && socket.commandQueue[0].sentTime) {
+                if(socket.commandQueue[0].parseCommandData(dataString)) {
+                    // command is complete, remove it from list
+                    socket._quitCommands(0, 1);
+                }
+            }
+
+            var result = atFormat.getASCIICommandResponse(dataString);
+            if(result != null) {
+                if (socket.commandQueue.length == 0) {
+                    console.log('got an command response, but no command is in the queue. Maybe the timeout already removed it.');
+                    return;
+                }
+
+                var found = false;
+
+                for(var i = 0; i < socket.commandQueue.length; i++) {
+                    if(socket.commandQueue[i].command == result) {
+                        found = true;
+
+                        if(i != 0) {
+                            socket._quitCommands(0, i);
+                        }
+                        break;
+                    }
+                }
+
+                if(found) {
+                    if(socket.commandQueue[0].parseCommandHeader(dataString)) {
+                        // command is complete, remove it from list
+                        socket._quitCommands(0, 1);
+                    }
+                }
+                else {
+                    console.log('got an command response, but the command was not found in the queue. Maybe the timeout already removed it.');
+                }
+
+                return;
+            }
+
+            // async Data like GPS, etc.
+            result = atFormat.parseASCII_TXT(dataString);
+            if (result != null) {
+                socket.emit('onAsyncTXT', result);
+                return;
+            }
+
+            result = atFormat.parseASCII_Garmin(dataString);
+            if (result != null) {
+                socket.emit('onAsyncGarmin', result);
+                return;
+            }
+
+            result = atFormat.parseASCII_OBD(dataString);
+            if (result != null) {
+                socket.emit('onAsyncOBD', result);
+                return;
+            }
+
+            // GPS must be at the end, because GPS has no
+            result = atFormat.parseASCII_GPS(dataString);
+            if (result != null) {
+                socket.emit('onAsyncGPS', result);
+                return;
+            }
+
+            console.log('Unrecognised data: ' + dataString);
 
         }
         else { // parse binary format
@@ -117,6 +181,8 @@ module.exports = net.createServer(function (socket) {
             }
         }
     });
+
+
 
     // Remove the client from the list when it leaves
     socket.on('end', function () {
