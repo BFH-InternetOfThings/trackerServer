@@ -100,6 +100,10 @@ atFormat.atBinaryResponsePacket = new Parser()
  }
  }); */
 
+atFormat.getDateFromBinaryObject = function(dataObject) {
+    return new Date(dataObject.year, dataObject.month, dataObject.day, dataObject.hour, dataObject.minute, dataObject.second, 0);
+};
+
 // Type Zero = zero data line, only command response line
 atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","WIRETAP","CALL","ANSWER","HANGUP","SNDTXT","SPSNDTXT", "CODE","SNDGA", ];
 

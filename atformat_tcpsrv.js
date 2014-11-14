@@ -4,9 +4,8 @@
 
 // Load the TCP Library
 var net = require('net');
-var atFormat = require('atformat');
-
-
+var atFormat = require('./atformat');
+var debug = require('debug')('atFormatTCPSrv');
 
 
 // Start a TCP Server
@@ -74,12 +73,11 @@ module.exports = net.createServer(function (socket) {
                 socket.write(data);
 
                 socket.isASCIIFormat = true;
-                console.log("Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
+                debug("Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
                 return;
             }
             catch(err) {
-                console.log(err);
-                console.log(data);
+                debug(err,data);
             }
         }
 
@@ -97,7 +95,7 @@ module.exports = net.createServer(function (socket) {
             var result = atFormat.getASCIICommandResponse(dataString);
             if(result != null) {
                 if (socket.commandQueue.length == 0) {
-                    console.log('got an command response, but no command is in the queue. Maybe the timeout already removed it.');
+                    debug('got an command response, but no command is in the queue. Maybe the timeout already removed it.');
                     return;
                 }
 
@@ -121,7 +119,7 @@ module.exports = net.createServer(function (socket) {
                     }
                 }
                 else {
-                    console.log('got an command response, but the command was not found in the queue. Maybe the timeout already removed it.');
+                    debug('got an command response, but the command was not found in the queue. Maybe the timeout already removed it.');
                 }
 
                 return;
@@ -153,7 +151,7 @@ module.exports = net.createServer(function (socket) {
                 return;
             }
 
-            console.log('Unrecognised data: ' + dataString);
+            debug('Unrecognised data: ' + dataString);
 
         }
         else { // parse binary format
@@ -170,9 +168,44 @@ module.exports = net.createServer(function (socket) {
                 return;
             }
 
-            console.log(packet.message);
+            debug(packet.message);
 
             socket.lastTransactionID = packet.transactionID;
+
+            switch(packet.messageEncoding) {
+                case 0x00: //atFormat.atAsyncStatusMessage,
+                    if(packet.message.messageID == 0xAB) {
+                        // heartbeat
+                        debug("Heartbeat no. " + packet.transactionID + " from modem id " + packet.message.modemID2 + " received!");
+                    }
+                    else {
+                        // GPS Position
+                        var gpsObj = {
+                            devicetime: atFormat.getDateFromBinaryObject(packet.message.data.rtc),
+                            gpstime: atFormat.getDateFromBinaryObject(packet.message.data.gps),
+                            latitude: packet.message.data.latitude / 100000,
+                            longitude: packet.message.data.longitude / 100000,
+                            altitude: packet.message.data.altitude2,
+                            speed: packet.message.data.speed,
+                            direction: packet.message.data.direction,
+                            satelliteCount: packet.message.data.satelliteCount
+                        };
+
+                        console.log(gpsObj);
+                    }
+                    break;
+                case 0x01: //atFormat.atCommandResponse,
+
+                    break;
+                case 0x02: //atFormat.atAsyncTextMessage,
+                case 0x03: //atFormat.atAsyncTextMessage,
+                case 0x04: //atFormat.atAsyncTextMessage
+
+                    break;
+                default:
+
+            }
+
 
             // Check for async answer
             if(packet.messageType == 0x02) {
@@ -186,7 +219,7 @@ module.exports = net.createServer(function (socket) {
 
     // Remove the client from the list when it leaves
     socket.on('end', function () {
-        clients.splice(clients.indexOf(socket), 1);
+        module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
         console.log('client' + socket.name + ' disconnected!');
     });
 
@@ -205,7 +238,7 @@ module.exports.sendCommand = function(trackerID, command, newValue, callback) {
         var client = module.exports.clients[i];
         if(client.trackerID) {
             if(client.trackerID === trackerID) {
-                client.registerCommand(command, newValue, callback);
+                client.sendCommand(command, newValue, callback);
                 return;
             }
         }
