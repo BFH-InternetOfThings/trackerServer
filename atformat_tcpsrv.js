@@ -52,7 +52,7 @@ module.exports = net.createServer(function (socket) {
 
         if (commandObject.sentTime) {
             // Currently a command is executing, wait until that command finishes
-            // TODO: Add Timeout handling for 10 seconds, this also needs an additional timer who checks for responses within 10s
+            // TODO: Add Timeout handling for 10 seconds, this also needs an additional timer who checks for responses within 10s!
             return;
         }
 

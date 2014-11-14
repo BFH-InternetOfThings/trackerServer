@@ -23,13 +23,11 @@ rl.on('line', function(line) {
             break;
 
         case data.startsWith("list"):
-            console.log(trackertcpsrv.clients.length + " Clients are connected: ");
-
             var clientList = "";
             for(var i = 1; i <= trackertcpsrv.clients.length; i++) {
                 clientList += trackertcpsrv.clients[i-1].trackerID + ", ";
             }
-            console.log(clientList.substring(0, clientList.length - 2));
+            console.log(trackertcpsrv.clients.length + " Clients are connected: " + clientList.substring(0, clientList.length - 2));
 
             rl.prompt();
             break;
@@ -41,7 +39,8 @@ rl.on('line', function(line) {
                 case 0:
                 case 1:
                     console.log("too few arguments");
-                    break;
+                    rl.prompt();
+                    return;
                 case 2:
                     parts[2] = "";
                     break;
