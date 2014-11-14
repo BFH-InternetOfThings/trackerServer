@@ -12,8 +12,6 @@ var S = require('string');
 module.exports = net.createServer(function (socket) {
 
     // Identify this client
-    socket.name = socket.remoteAddress + ":" + socket.remotePort;
-    //socket.isInitHandshakeDone = false;
     socket.isASCIIFormat = true;
     socket.trackerID = null;
     socket.commandQueue = [];
@@ -22,16 +20,20 @@ module.exports = net.createServer(function (socket) {
 
     socket.sendCommand = function(command, newValue, callback) {
 
-        if(command) {
-            socket.commandQueue.push(new atFormat.AtCommand(command, newValue, callback));
-        }
+        var newCommand = new atFormat.AtCommand(command, newValue, callback);
 
-        if(!socket.commandQueue || socket.commandQueue.length == 0) {
+        if(!socket.trackerID && newCommand !== "MODID" ) {
+            // do not send a command until the initial handshake is done
+            newCommand.callCallback(socket);
             return;
         }
 
-        if(!socket.trackerID && socket.commandQueue[0].command !== "MODID" ) {
-            // do not send a command until the initial handshake is done
+        if(command) {
+            socket.commandQueue.push(newCommand);
+        }
+
+        if(socket.commandQueue.length == 0) {
+            // return on empty queue
             return;
         }
 
@@ -61,6 +63,9 @@ module.exports = net.createServer(function (socket) {
         for(var i = 0; i < commands.length; i++) {
             commands[i].callCallback(socket);
         }
+
+        // send next command from the queue
+        socket.sendCommand();
     };
 
     socket._processDataLine = function(line) {
@@ -95,19 +100,19 @@ module.exports = net.createServer(function (socket) {
         // async Data like GPS, etc.
         result = atFormat.parseASCII_TXT(line);
         if (result != null) {
-            socket.emit('TxtDataReceived', result);
+            socket.emit('TxtDataReceived', socket, result);
             return;
         }
 
         result = atFormat.parseASCII_Garmin(line);
         if (result != null) {
-            socket.emit('GarminDataReceived', result);
+            socket.emit('GarminDataReceived', socket, result);
             return;
         }
 
         result = atFormat.parseASCII_OBD(line);
         if (result != null) {
-            socket.emit('OBDDataReceived', result);
+            socket.emit('OBDDataReceived', socket, result);
             return;
         }
 
@@ -189,13 +194,37 @@ module.exports = net.createServer(function (socket) {
                 }
 
                 break;
-            case 0x02: //atFormat.atAsyncTextMessage,
-            case 0x03: //atFormat.atAsyncTextMessage,
-            case 0x04: //atFormat.atAsyncTextMessage
+            case 0x02: //atFormat.atAsyncTextMessage, // Text
 
-                break;
-            default:
+                var txtObj = {
+                    textMessage: packet.message.textMessage,
+                    deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
+                    posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
+                };
 
+                socket.emit('TxtDataReceived', socket, txtObj);
+                return;
+
+            case 0x03: //atFormat.atAsyncTextMessage, // Garmin
+
+                var txtObj = {
+                    textMessage: packet.message.textMessage,
+                    deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
+                    posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
+                };
+
+                socket.emit('GarminDataReceived', socket, txtObj);
+                return;
+            case 0x04: //atFormat.atAsyncTextMessage  // OBD
+
+                var txtObj = {
+                    textMessage: packet.message.textMessage,
+                    deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
+                    posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
+                };
+
+                socket.emit('OBDDataReceived', socket, txtObj);
+                return;
         }
 
         // Acknowledge async messages
@@ -208,13 +237,13 @@ module.exports = net.createServer(function (socket) {
     // Remove the client from the list when it leaves
     socket.on('end', function () {
         module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
-        console.log('client' + socket.name + ' disconnected!');
+        module.exports.emit("trackerDisconnected", socket);
     });
 
     // Put this new client in the list
     module.exports.clients.push(socket);
 
-    // check the mod id
+    // get the Tracker id
     socket.sendCommand("MODID", "", function(err, tracker, response) {
         if(err) {
             console.log(err);
@@ -224,11 +253,6 @@ module.exports = net.createServer(function (socket) {
             module.exports.emit("trackerConnected", socket);
         }
     });
-
-    //socket.write("AT$MODID?");
-
-
-
 });
 
 module.exports.clients = [];
@@ -249,31 +273,5 @@ module.exports.sendCommand = function(trackerID, command, newValue, callback) {
     callback(new Error('Tracker id ' + trackerID + ' not found!'));
 };
 
-/*
-module.exports.broadcastCommand = function(command, newValue, callback) {
-    clients.forEach(function (client) {
-        client.registerCommand(command, newValue, callback);
-    });
-};
-
-// Send a message to all clients
-function broadcast(message) {
-    clients.forEach(function (client) {
-        console.log("--> send " + message + " to client " + client.name);
-        // only send if inital Handshake is done, otherwise the tracker won't answer the query
-        if (client.isASCIIFormat != null) {
-            if(client.isASCIIFormat == true) {
-                client.write(message);
-            }
-            else {
-                client.sendBinaryCommand(message);
-            }
-        }
-    });
-}
-
-// Put a friendly message on the terminal of the server.
-console.log("Tissan Tracker server running at port 9090\n");
-*/
 
 
