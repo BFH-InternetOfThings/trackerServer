@@ -56,12 +56,12 @@ rl.on('line', function(line) {
         var command = data.substring(0, n);
         var newValue = data.substring(n+1);
 
-        trackertcpsrv.clients[currentClient-1].sendCommand(command,  newValue, function(err, response) {
+        trackertcpsrv.clients[currentClient-1].sendCommand(command,  newValue, function(err, tracker, response) {
             if(err) {
-                console.log(err);
+                console.log(err, tracker.trackerID, response);
             }
             else {
-                console.log(response);
+                console.log(tracker.trackerID, response);
             }
             rl.prompt();
         })
@@ -76,7 +76,7 @@ rl.on('line', function(line) {
 });
 
 trackertcpsrv.on('trackerConnected', function(tracker) {
-   console.log('Tracker with IP ' + tracker.name + " connected!");
+   console.log('Tracker ' + tracker.trackerID + " connected!");
 });
 
 trackertcpsrv.on('gpsDataReceived', function(tracker, gps) {

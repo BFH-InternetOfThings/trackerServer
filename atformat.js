@@ -74,9 +74,18 @@ atFormat.atASCIIAcknowledge = new Parser()
 
 atFormat.atBinaryResponsePacket = new Parser()
     .endianess('big')
-    .uint16('transactionID')
-    .uint8('messageEncoding')
-    .uint8('messageType')
+    .uint16('transactionID', {
+        assert: function(x) {
+            return x >= 0;
+        }})
+    .uint8('messageEncoding', {
+        assert: function(x) {
+            return x >= 0 || x < 5;
+        }})
+    .uint8('messageType', {
+        assert: function(x) {
+            return x >= 0 || x < 5;
+        }})
     .choice('message', {
         tag: 'messageEncoding',
         choices: {
@@ -102,19 +111,10 @@ atFormat.atBinaryResponsePacket = new Parser()
  }); */
 
 atFormat.getMomentFromBinaryObject = function(dataObject) {
+    dataObject.month -= 1;
     dataObject.millisecond = 0;
     return moment.utc(dataObject);
 };
-
-// Type Zero = zero data line, only command response line
-atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","WIRETAP","CALL","ANSWER","HANGUP","SNDTXT","SPSNDTXT", "CODE","SNDGA", ];
-
-// Type One = One Data line for question, only command response line on error or for set
-atFormat.typeOneCommands = ["MODID","PIN","APN","SMSDST","SMSLST","LSTLIMIT","SMSCFG","GPRSEN","IPTYPE", "BAND","POLC","GSMJDC","FORMAT","HB","RETRY","NETCFG", "PACKAGE", "BAUD","FILTER","ODO","URL","GPSPT","PKEY","OKEY","DNS","MSGQ", "VEXT", "VBAT", "VERSION", "QUST","IMEI","IP","SMID","SIMID","PWRM","MIC","SPK","SPKMUTE","VOICE","ICL","OGL","RFIDC","IDRM","IBDETEN","TAG","FUEL","SNDOBD", "OBDEN", "OBDRPT","OBDGDTC","GAFUN","GADETEN","GETPDS","PDSR","LPRC","IN1","IN1EN","IGN","IGNEN","EGN","EGNEN","SPEED", "SPEEDEN","GF", "GFEN", "POWER", "GPSMON",  ];
-
-// Type List = Multiple Line for questions, only command response line on error or for set
-atFormat.typeListCommands = ["HOSTS","POL","SCHED","RFLC"];
-
 
 atFormat.generateBinaryAcknowledge = function(transactionID, success) {
     var ackBuffer = new Buffer(6);
@@ -137,20 +137,6 @@ atFormat.generateBinaryCommandRequest = function(transactionID, commandString) {
     return buf;
 };
 
-atFormat.getASCIICommandResponse = function(responseString) {
-    var response = S(responseString);
-
-    if(response.startsWith("OK:")) {
-        return response.substring(3);
-
-    }
-
-    if(response.startsWith('ERROR:')) {
-        return response.substring(6)
-    }
-
-    return null;
-};
 
 atFormat.parseASCII_GPS = function(gpsstring) {
     //<Modem_ID>,<GPS_DateTime>,<Longitude>,<Latitude>,<Speed>,<Direction>,<Altitude>,<Satellites>,<Message ID>,<Input Status>,<Output Status>,<Analog Input1>,<Analog Input2>,<RTC_DateTime>,<Mileage>
@@ -210,26 +196,65 @@ atFormat.parseAsyncASCII = function(dataString) {
 
 };
 
+// Type Zero = zero data line, only command response line
+atFormat.typeWriteOnlyCommands = ["PINEN", "REBOOT", "RESET", "MSGQCL","SAVE","WIRETAP","CALL","ANSWER","HANGUP","SNDTXT","SPSNDTXT", "CODE","SNDGA" ];
+
+// Type One = One Data line for question, only command response line on error or for set
+atFormat.typeOneCommands = ["MODID","PIN","APN","SMSDST","SMSLST","LSTLIMIT","SMSCFG","GPRSEN","IPTYPE", "BAND","POLC","GSMJDC","FORMAT","HB","RETRY","NETCFG", "PACKAGE", "BAUD","FILTER","ODO","URL","GPSPT","PKEY","OKEY","DNS","MSGQ", "VEXT", "VBAT", "VERSION", "QUST","IMEI","IP","SMID","SIMID","PWRM","MIC","SPK","SPKMUTE","VOICE","ICL","OGL","RFIDC","IDRM","IBDETEN","TAG","FUEL","SNDOBD", "OBDEN", "OBDRPT","OBDGDTC","GAFUN","GADETEN","GETPDS","PDSR","LPRC","IN1","IN1EN","IGN","IGNEN","EGN","EGNEN","SPEED", "SPEEDEN","GF", "GFEN", "POWER", "GPSMON"  ];
+
+// Type List = Multiple Line for questions, only command response line on error or for set
+atFormat.typeListCommands = ["HOSTS","POL","SCHED","RFLC"];
+
+atFormat.ATCommandReturnCode = {
+    AWAIT_MORE_DATA: 2,
+    SUCCESSFULLY_FINISHED: 1,
+    UNKNOWN_DATA:   0,
+    WRONG_COMMAND: -1
+};
+
 atFormat.AtCommand = function(command, newValue, callback) {
 
-    this.command = command;
-    this.sentTime = null;
-    this.responseCommand = '';
-    this.responseData = '';
-    this.outstandingLineCount = 0;
-    this.result = false;
-    this.response = null;
-    this.callback = callback;
+    var self = this;
+    self.command = command.toString().toUpperCase();
+    self.newValue = newValue.toString();
+    self.sentTime = null;
+    self.responseData = [];
+    self.outstandingLineCount = 0;
+    self.result = false;
+    self.callback = callback;
+
+    // validate command
+    var i, found = false;
+    for(i = 0; i < atFormat.typeWriteOnlyCommands.length && !found; i++) {
+        if(atFormat.typeWriteOnlyCommands[i] === self.command) {
+            self.outstandingLineCount = 1;
+            found = true;
+        }
+    }
+
+    for(i = 0; i < atFormat.typeOneCommands.length && !found; i++) {
+        if(atFormat.typeOneCommands[i] === self.command) {
+            self.outstandingLineCount = 2;
+            found = true;
+        }
+    }
+
+    for(i = 0; i < atFormat.typeListCommands.length && !found; i++) {
+        if(atFormat.typeListCommands[i] === self.command) {
+            self.outstandingLineCount = 11;
+            found = true;
+        }
+    }
 
     this.getCommandString = function() {
         var commandString = '';
 
-        if (command && command != '') {
-            if (newValue == undefined || newValue == null || newValue == '') {
-                commandString = "AT$" + command + "?\n";
+        if (self.command && self.command != '') {
+            if (self.newValue === undefined || self.newValue == null || self.newValue == '') {
+                commandString = "AT$" + self.command + "?\n";
             }
             else {
-                commandString = "AT$" + command + "=" + newValue + "\n";
+                commandString = "AT$" + self.command + "=" + self.newValue + "\n";
             }
         }
 
@@ -240,33 +265,45 @@ atFormat.AtCommand = function(command, newValue, callback) {
         this.sentTime = true;
     };
 
-    this.callCallback = function() {
+    this.callCallback = function(tracker) {
         this.outstandingLineCount = 0;
         if(this.result) {
-            this.callback(null, this.response);
+            this.callback(null, tracker, self.responseData);
         }
         else {
-            this.callback(new Error("Tracker returned error for command" + this.command));
+            this.callback(new Error("Tracker returned error for command " + this.command), tracker, self.responseData);
         }
     };
 
     // return true if one more line is expected, otherwise false
-    this.parseCommandHeader = function(headerString)
+    this.parseLine = function(line)
     {
-        var header = S(headerString);
+        var dataLine = line.toString().match(/^(\$|OK:|ERROR:)([\w\d]+)=?(.*)/i);
 
-        if(header.startsWith("OK:")) {
-            //TODO
+        if(!dataLine) {
+            console.log("Unknown command data: ", dataLine);
+            return atFormat.ATCommandReturnCode.UNKNOWN_DATA;
         }
 
-        return this.outstandingLineCount == 0;
-    };
+        dataLine[1] = dataLine[1].toUpperCase();
+        dataLine[2] = dataLine[2].toUpperCase();
 
-    // return true if one more line is expected, otherwise false
-    this.parseCommandData = function(dataString) {
+        if(dataLine[2] !== self.command) {
+            return atFormat.ATCommandReturnCode.WRONG_COMMAND;
+        }
 
-        return this.outstandingLineCount == 0;
+        if(dataLine[1] === "OK:" || dataLine[1] === "ERROR:") {
+            // we got an header
+            self.result = dataLine[1] === "OK:";
+        }
+        else {
+            // we got a data line
+            self.responseData.push(dataLine[3]);
+        }
+
+        self.outstandingLineCount -= 1;
+        return self.outstandingLineCount > 0 ? atFormat.ATCommandReturnCode.AWAIT_MORE_DATA : atFormat.ATCommandReturnCode.SUCCESSFULLY_FINISHED;
     };
-}
+};
 
 module.exports = atFormat;
