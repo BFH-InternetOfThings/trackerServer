@@ -38,6 +38,5 @@ trackertcpsrv.listen(config.port, function(err) {
     }
     else {
         console.log("Tissan Tracker server is listening on port " + config.port);
-        rl.prompt();
     }
 });
