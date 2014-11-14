@@ -22,27 +22,41 @@ rl.on('line', function(line) {
         rl.close();
     }
     else if(data.startsWith("list")) {
-        var clients = trackertcpsrv.clients;
-        console.log(clients.length + " Clients are connected: ");
-        for(var i = 0; i < clients.length; i++) {
-            console.log(i + ": " + clients[i].name + ",  ");
+
+        console.log(trackertcpsrv.clients.length + " Clients are connected: ");
+        for(var i = 1; i <= trackertcpsrv.clients.length; i++) {
+            console.log(i + ": " + trackertcpsrv.clients[i-1].name + ",  ");
         }
         rl.prompt();
     }
     else if(data.startsWith("select")) {
-        var clientNo = data.substring(data, 6).toInteger();
 
-        if(currentClient > 0 && currentClient <= trackertcpsrv.clients) {
+        var clientNo = data.substring(6).trim().toInteger();
+
+        if(clientNo > 0 && clientNo <= trackertcpsrv.clients.length) {
             currentClient = clientNo;
+            rl.setPrompt('cmd ' + currentClient + '> ');
+        }
+        else if(clientNo === 0) {
+            currentClient = 0;
+            rl.setPrompt('cmd> ');
         }
         else {
             console.log("invalid client no. " + clientNo);
         }
         rl.prompt();
     }
-    else if(currentClient > 0 && currentClient <= trackertcpsrv.clients) {
+    else if(currentClient > 0 && currentClient <= trackertcpsrv.clients.length) {
 
-        trackertcpsrv.clients[currentClient - 1].sendCommand(command,  newValue, function(err, response) {
+        var n = data.indexOf(" ");
+
+        if(n == -1) {
+            n = data.length;
+        }
+        var command = data.substring(0, n);
+        var newValue = data.substring(n+1);
+
+        trackertcpsrv.clients[currentClient-1].sendCommand(command,  newValue, function(err, response) {
             if(err) {
                 console.log(err);
             }
@@ -61,8 +75,13 @@ rl.on('line', function(line) {
     process.exit(0);
 });
 
+trackertcpsrv.on('trackerConnected', function(tracker) {
+   console.log('Tracker with IP ' + tracker.name + " connected!");
+});
 
-
+trackertcpsrv.on('gpsDataReceived', function(tracker, gps) {
+    console.log('Tracker ' + tracker.name + " sent GPS: ", gps);
+});
 
 trackertcpsrv.listen(config.port, function(err) {
     if(err) {

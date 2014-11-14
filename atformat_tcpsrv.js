@@ -191,10 +191,14 @@ module.exports = net.createServer(function (socket) {
                             satelliteCount: packet.message.data.satelliteCount
                         };
 
-                        console.log(gpsObj);
+                        module.exports.emit('gpsDataReceived', socket, gpsObj);
                     }
                     break;
                 case 0x01: //atFormat.atCommandResponse,
+
+                    // command is complete, remove it from list
+                    socket._quitCommands(0, 1);
+
 
                     break;
                 case 0x02: //atFormat.atAsyncTextMessage,
@@ -223,10 +227,12 @@ module.exports = net.createServer(function (socket) {
         console.log('client' + socket.name + ' disconnected!');
     });
 
+
+
     // Put this new client in the list
     module.exports.clients.push(socket);
-    console.log('client ' + socket.name + ' connected!');
 
+    module.exports.emit("trackerConnected", socket);
 });
 
 module.exports.clients = [];
