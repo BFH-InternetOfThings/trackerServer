@@ -23,9 +23,11 @@ rl.on('line', function(line) {
     }
     else if(data.startsWith("list")) {
         var clients = trackertcpsrv.clients;
+        console.log(clients.length + " Clients are connected: ");
         for(var i = 0; i < clients.length; i++) {
-            rl.write(i + ") " + clients[i].name);
+            console.log(i + ": " + clients[i].name + ",  ");
         }
+        rl.prompt();
     }
     else if(data.startsWith("select")) {
         var clientNo = data.substring(data, 6).toInteger();
@@ -34,24 +36,26 @@ rl.on('line', function(line) {
             currentClient = clientNo;
         }
         else {
-            rl.write("invalid client no. " + clientNo);
+            console.log("invalid client no. " + clientNo);
         }
+        rl.prompt();
     }
     else if(currentClient > 0 && currentClient <= trackertcpsrv.clients) {
 
         trackertcpsrv.clients[currentClient - 1].sendCommand(command,  newValue, function(err, response) {
             if(err) {
-                rl.write(err);
+                console.log(err);
             }
             else {
-                rl.write(response);
+                console.log(response);
             }
+            rl.prompt();
         })
     }
     else {
-        rl.write("unknown command or no client selected. Use select <client no.>")
+        console.log("unknown command or no client selected. Use select <client no.>");
+        rl.prompt();
     }
-
 }).on('close',function(){
 
     process.exit(0);

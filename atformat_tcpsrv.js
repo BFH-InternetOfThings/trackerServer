@@ -181,8 +181,8 @@ module.exports = net.createServer(function (socket) {
                     else {
                         // GPS Position
                         var gpsObj = {
-                            devicetime: atFormat.getDateFromBinaryObject(packet.message.data.rtc),
-                            gpstime: atFormat.getDateFromBinaryObject(packet.message.data.gps),
+                            devicetime: atFormat.getMomentFromBinaryObject(packet.message.data.rtc).toDate(),
+                            gpstime: atFormat.getMomentFromBinaryObject(packet.message.data.gps).toDate(),
                             latitude: packet.message.data.latitude / 100000,
                             longitude: packet.message.data.longitude / 100000,
                             altitude: packet.message.data.altitude2,

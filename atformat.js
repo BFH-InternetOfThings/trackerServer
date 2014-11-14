@@ -3,6 +3,7 @@
  */
 var Parser = require('binary-parser').Parser;
 var S = require('string');
+var moment = require('moment');
 
 var atFormat = {};
 
@@ -100,8 +101,9 @@ atFormat.atBinaryResponsePacket = new Parser()
  }
  }); */
 
-atFormat.getDateFromBinaryObject = function(dataObject) {
-    return new Date(dataObject.year, dataObject.month, dataObject.day, dataObject.hour, dataObject.minute, dataObject.second, 0);
+atFormat.getMomentFromBinaryObject = function(dataObject) {
+    dataObject.millisecond = 0;
+    return moment.utc(dataObject);
 };
 
 // Type Zero = zero data line, only command response line
