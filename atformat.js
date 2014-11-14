@@ -215,8 +215,8 @@ atFormat.ATCommandReturnCode = {
 atFormat.AtCommand = function(command, newValue, callback) {
 
     var self = this;
-    self.command = command.toString().toUpperCase();
-    self.newValue = newValue.toString();
+    self.command = !S(command).isEmpty() ? command.toString().toUpperCase() : "";
+    self.newValue = !S(newValue).isEmpty() ? newValue.toString() : "";
     self.sentTime = null;
     self.responseData = [];
     self.outstandingLineCount = 0;
@@ -250,7 +250,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
         var commandString = '';
 
         if (self.command && self.command != '') {
-            if (self.newValue === undefined || self.newValue == null || self.newValue == '') {
+            if (S(self.newValue).isEmpty()) {
                 commandString = "AT$" + self.command + "?\n";
             }
             else {
@@ -266,12 +266,13 @@ atFormat.AtCommand = function(command, newValue, callback) {
     };
 
     this.callCallback = function(tracker) {
-        this.outstandingLineCount = 0;
-        if(this.result) {
-            this.callback(null, tracker, self.responseData);
-        }
-        else {
-            this.callback(new Error("Tracker returned error for command " + this.command), tracker, self.responseData);
+        if(self.callback) {
+            if (self.result) {
+                self.callback(null, tracker, self.responseData);
+            }
+            else {
+                self.callback(new Error("Tracker returned error for command " + self.command), tracker, self.responseData);
+            }
         }
     };
 

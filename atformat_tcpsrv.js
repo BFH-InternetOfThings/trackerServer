@@ -22,10 +22,20 @@ module.exports = net.createServer(function (socket) {
 
         var newCommand = new atFormat.AtCommand(command, newValue, callback);
 
-        if(!socket.trackerID && newCommand !== "MODID" ) {
+        if(!socket.trackerID ) {
             // do not send a command until the initial handshake is done
             newCommand.callCallback(socket);
-            return;
+
+            command = "MODID";
+            newCommand = new atFormat.AtCommand(command, "", function(err, tracker, response) {
+                if(err) {
+                    console.log(err);
+                }
+                else {
+                    socket.trackerID = response[0];
+                    module.exports.emit("trackerConnected", socket);
+                }
+            });
         }
 
         if(command) {
@@ -47,11 +57,9 @@ module.exports = net.createServer(function (socket) {
 
         commandObject.setStatusSent();
         if(socket.isASCIIFormat) {
-            console.log("Send command: ", commandObject.getCommandString());
             socket.write(commandObject.getCommandString());
         }
         else {
-            console.log("Send command: ", commandObject.getCommandString(), atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
             socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
         }
     };
@@ -244,7 +252,7 @@ module.exports = net.createServer(function (socket) {
     module.exports.clients.push(socket);
 
     // get the Tracker id
-    socket.sendCommand("MODID", "", function(err, tracker, response) {
+    socket.sendCommand(); /*"", "", function(err, tracker, response) {
         if(err) {
             console.log(err);
         }
@@ -252,7 +260,7 @@ module.exports = net.createServer(function (socket) {
             socket.trackerID = response[0];
             module.exports.emit("trackerConnected", socket);
         }
-    });
+    }); */
 });
 
 module.exports.clients = [];
