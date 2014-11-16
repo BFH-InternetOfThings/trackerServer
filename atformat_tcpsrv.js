@@ -17,20 +17,18 @@ module.exports = net.createServer(function (socket) {
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
 
-
     socket.sendCommand = function (command, newValue, callback) {
 
         var newCommand = new atFormat.AtCommand(command, newValue, callback);
 
-        if (!socket.trackerID) {
-            // the Tracker sends a hearbeat after every connect
-            // if trackerID is null, then this heartbeat didn't get in until now
-
-            // do not send a command until the initial handshake is done
-            newCommand.finishAndCallCallback(socket);
-        }
-
         if (newCommand.isValid()) {
+
+            if (!socket.trackerID) {
+                // the Tracker sends a hearbeat after every connect
+                // if trackerID is null, then this heartbeat didn't get in until now
+                newCommand.finishAndCallCallback(socket, "No commands can be sent until initial tracker handshake is done");
+            }
+
             socket.commandQueue.push(newCommand);
         }
         else {
@@ -175,8 +173,6 @@ module.exports = net.createServer(function (socket) {
 
                 socket.isASCIIFormat = true;
 
-                debug("ASCII Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
-
                 socket._setTrackerID(asciiAck.modemID);
 
                 module.exports.emit('heartbeatReceived', socket, asciiAck.sequenceID);
@@ -212,21 +208,25 @@ module.exports = net.createServer(function (socket) {
             case 0x00: //atFormat.atAsyncStatusMessage,
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
-                    debug("Binary Heartbeat no. " + packet.transactionID + " from modem id " + packet.message.modemID2 + " received!");
+                    if(packet.message.modemID1) debug("WARNING: TrackerID Numbers greater than MAX_INTEGER are not supported and are converted to normal Integers!");
 
                     socket._setTrackerID(packet.message.modemID2);
 
                     module.exports.emit('heartbeatReceived', socket, packet.transactionID);
                 }
                 else {
+
+                    // handle the annoying 24-bit signed integer for altitude
+                    var altitudeBuffer = new Buffer([packet.message.data.altitude1, packet.message.data.altitude2, packet.message.data.altitude3, 0x00]);
+                    var altitude = altitudeBuffer.readInt32BE(0) / Math.pow(2, 8); // convert to a 32 bit integer (signed / unsigned) and then divide last 8 bits away
+
                     // GPS Position
                     var gpsObj = {
                         devicetime: atFormat.getMomentFromBinaryObject(packet.message.data.rtc).toDate(),
                         gpstime: atFormat.getMomentFromBinaryObject(packet.message.data.gps).toDate(),
                         latitude: packet.message.data.latitude / 100000,
                         longitude: packet.message.data.longitude / 100000,
-                        //TODO: Proper implement 24-bit integer data type
-                        altitude: packet.message.data.altitude2,
+                        altitude: altitude,
                         speed: packet.message.data.speed / 10,
                         direction: packet.message.data.direction / 10,
                         satelliteCount: packet.message.data.satelliteCount

@@ -26,7 +26,8 @@ atFormat.atAsyncGPSMessage = new Parser()
     .int32('latitude') // 0.00001 degree units
     .int32('longitude') // 0.00001 degree units
     .uint8('altitude1')
-    .int16('altitude2')
+    .uint8('altitude2')
+    .uint8('altitude3')
     .uint16('speed') // 0.1 meters per second units
     .uint16('direction') // 0.1 degree units
     .uint32('odometer') // meter units - see AT$ODO command
@@ -38,6 +39,7 @@ atFormat.atAsyncGPSMessage = new Parser()
     .uint16('analogInput2') // 0.001 voltage units
     .nest('rtc', { type: atFormat.atDateTime })
     .nest('posSending', { type: atFormat.atDateTime });
+
 
 atFormat.atAsyncStatusMessage = new Parser()
     .endianess('big')
