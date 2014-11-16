@@ -407,13 +407,13 @@ atFormat.AtCommand = function(command, newValue, callback) {
         self.sendTimer = timerObject;
     };
 
-    this.finishAndCallCallback = function(tracker, errortext) {
+    this.finishAndCallCallback = function(tracker, errorText) {
         // clear Timer and set finishedTime
         if(self.sendTimer) clearTimeout(self.sendTimer);
         self.finishedTime = Moment();
         var difference = self.sentTime ? self.finishedTime.diff(self.sentTime) : null;
 
-        if(!S(errortext).isEmpty()) self.errortext = errortext;
+        if(!S(errorText).isEmpty()) self.errortext = errorText;
 
         if(self.callback) {
             if (self.result) {

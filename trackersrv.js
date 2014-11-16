@@ -23,6 +23,7 @@ trackersrv.db.once('open', function () {
 require('./models/Tracker')(trackersrv, mongoose);
 require('./models/PositionHistory')(trackersrv, mongoose);
 require('./models/ConnectionLog')(trackersrv, mongoose);
+require('./models/StatusHistory')(trackersrv, mongoose);
 
 var getStatus = function(tracker) {
 
@@ -42,8 +43,8 @@ var getStatus = function(tracker) {
 
             var vExt = S(response).toInteger() / 1000;
 
-            tracker.updateStatus(vBat, vExt);
-            tracker.addLogEntry('Updated tracker status with BatteryVoltage ' + vBat + 'V and ExternVoltage ' + vExt + 'V');
+            tracker.trackerDBEntry.updateStatus(vBat, vExt);
+            tracker.trackerDBEntry.addLogEntry('Updated tracker status with BatteryVoltage ' + vBat + 'V and ExternVoltage ' + vExt + 'V');
             debug('Updated tracker status with BatteryVoltage ' + vBat + 'V and ExternVoltage ' + vExt + 'V');
         }));
     }));
@@ -78,7 +79,7 @@ trackersrv.on('trackerConnected', function(tracker) {
 
         tracker.trackerAbfrageIntervall = setInterval(getStatus, 2 * 60 * 1000, tracker);
 
-        getStatus(tracker);
+        //getStatus(tracker); tracker isn't ready here
     });
 });
 

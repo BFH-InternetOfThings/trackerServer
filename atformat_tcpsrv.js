@@ -5,7 +5,7 @@
 // Load the TCP Library
 var net = require('net');
 var atFormat = require('./atformat');
-var debug = require('debug')('atFormatTCPSrv');
+var debug = require('debug')('atformattcpsrv');
 var S = require('string');
 var Long = require("long");
 
@@ -55,7 +55,7 @@ module.exports = net.createServer(function (socket) {
             if(!commandObj.finishedTime) {
                 for (var i = 0; i < socket.commandQueue.length; i++) {
                     if( socket.commandQueue[i] == commandObj ) {
-                        socket._quitCommands(i, 1);
+                        socket._quitCommands(i, 1, "Timeout while waiting for data for command " + commandObj.command);
                         return;
                     }
                 }
@@ -65,9 +65,11 @@ module.exports = net.createServer(function (socket) {
 
         if (socket.isASCIIFormat) {
             socket.write(commandObject.getCommandString());
+            debug("Sent to tracker " + socket.trackerID, commandObject.getCommandString());
         }
         else {
             socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
+            debug("Sent to tracker " + socket.trackerID, commandObject.getCommandString());
         }
     };
 
@@ -98,12 +100,12 @@ module.exports = net.createServer(function (socket) {
         }
     };
 
-    socket._quitCommands = function (startIndex, count) {
+    socket._quitCommands = function (startIndex, count, errorText) {
         // it it is not the first command, all commands before it failed. Remove then and call their callbacks
         var commands = socket.commandQueue.splice(startIndex, count);
 
         for (var i = 0; i < commands.length; i++) {
-            commands[i].finishAndCallCallback(socket);
+            commands[i].finishAndCallCallback(socket, errorText);
         }
 
         // send next command from the queue
@@ -121,7 +123,7 @@ module.exports = net.createServer(function (socket) {
                         return;
 
                     case atFormat.ATCommandReturnCode.SUCCESSFULLY_FINISHED:
-                        socket._quitCommands(0, i + 1);
+                        socket._quitCommands(i, 1, null);
                         return;
 
                     case atFormat.ATCommandReturnCode.WRONG_COMMAND:
@@ -194,6 +196,7 @@ module.exports = net.createServer(function (socket) {
         try {
             var packet = atFormat.atBinaryResponsePacket.parse(data);
 
+            debug("Received from tracker " + socket.trackerID, packet);
             socket.isASCIIFormat = false;
             socket.lastTransactionID = packet.transactionID;
         }
@@ -202,6 +205,8 @@ module.exports = net.createServer(function (socket) {
 
             // Process ASCII Message
             socket.isASCIIFormat = true;
+            debug("Received from tracker " + socket.trackerID, data.toString('ascii'));
+
             socket._processDataLine(data.toString('ascii'));
             return;
         }
