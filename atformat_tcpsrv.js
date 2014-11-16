@@ -32,7 +32,7 @@ module.exports = net.createServer(function (socket) {
                 socket.commandQueue.push(newCommand);
             }
             else {
-                newCommand.finishAndCallCallback(socket, "Invalid command");
+                newCommand.finishAndCallCallback(socket, null);
             }
         }
 
@@ -48,7 +48,7 @@ module.exports = net.createServer(function (socket) {
             return;
         }
 
-        var timeoutInSeconds = 10;
+        var timeoutInSeconds = 20;
         commandObject.setStatusSent(setTimeout(function(commandObj) {
             // if the result is still null, then we didn't get a response
             // in this case quit the command from the queue
