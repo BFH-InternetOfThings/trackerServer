@@ -460,7 +460,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
         }
 
         if(dataLine[1] === "OK:" || dataLine[1] === "ERROR:") {
-            // we got an header
+            // we got a header
             self.result = dataLine[1] === "OK:";
             if(!self.result) self.errortext = "Tracker returned ERROR";
         }

@@ -301,6 +301,7 @@ module.exports = net.createServer(function (socket) {
 
 module.exports.clients = [];
 
+module.exports.AtCommand = atFormat.AtCommand;
 
 module.exports.sendCommand = function (trackerID, command, newValue, callback) {
 

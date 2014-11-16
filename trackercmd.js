@@ -64,7 +64,6 @@ rl.on('line', function(line) {
 
 }).on('close',function(){
     process.exit(0);
-
 });
 
 trackertcpsrv.on('trackerConnected', function(tracker) {
