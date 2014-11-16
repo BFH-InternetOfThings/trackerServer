@@ -24,7 +24,7 @@ module.exports = net.createServer(function (socket) {
 
         if (!socket.trackerID) {
             // do not send a command until the initial handshake is done
-            newCommand.callCallback(socket);
+            newCommand.finishAndCallCallback(socket);
 
             command = "MODID";
             newCommand = new atFormat.AtCommand(command, "", function (err, tracker, response) {
@@ -38,9 +38,11 @@ module.exports = net.createServer(function (socket) {
             });
         }
 
-        // TODO: Refactor useless command-is-empty query instead of newCommand query, dahaa
-        if (command) {
+        if (newCommand.isValid()) {
             socket.commandQueue.push(newCommand);
+        }
+        else {
+            newCommand.finishAndCallCallback(socket, "Invalid command");
         }
 
         if (socket.commandQueue.length == 0) {
@@ -52,11 +54,24 @@ module.exports = net.createServer(function (socket) {
 
         if (commandObject.sentTime) {
             // Currently a command is executing, wait until that command finishes
-            // TODO: Add Timeout handling for 10 seconds, this also needs an additional timer who checks for responses within 10s!
             return;
         }
 
-        commandObject.setStatusSent();
+        var timeoutInSeconds = 10;
+        commandObject.setStatusSent(setTimeout(function(commandObj) {
+            // if the result is still null, then we didn't get a response
+            // in this case quit the command from the queue
+            if(!commandObj.finishedTime) {
+                for (var i = 0; i < socket.commandQueue.length; i++) {
+                    if( socket.commandQueue[i] == commandObj ) {
+                        socket._quitCommands(i, 1);
+                        return;
+                    }
+                }
+            }
+        }, timeoutInSeconds * 1000, commandObject));
+
+
         if (socket.isASCIIFormat) {
             socket.write(commandObject.getCommandString());
         }
@@ -70,7 +85,7 @@ module.exports = net.createServer(function (socket) {
         var commands = socket.commandQueue.splice(startIndex, count);
 
         for (var i = 0; i < commands.length; i++) {
-            commands[i].callCallback(socket);
+            commands[i].finishAndCallCallback(socket);
         }
 
         // send next command from the queue
@@ -95,7 +110,6 @@ module.exports = net.createServer(function (socket) {
                         break;
 
                     case atFormat.ATCommandReturnCode.UNKNOWN_DATA: // Fall through default
-
                     default:
                         i = socket.commandQueue.length; // break the loop
                 }

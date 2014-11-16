@@ -215,10 +215,13 @@ atFormat.AtCommand = function(command, newValue, callback) {
     self.command = !S(command).isEmpty() ? command.toString().toUpperCase() : "";
     self.newValue = !S(newValue).isEmpty() ? newValue.toString() : "";
     self.sentTime = null;
+    self.finishedTime = null;
     self.responseData = [];
     self.outstandingLineCount = 0;
     self.result = false;
+    self.errortext = "";
     self.callback = callback;
+    self.sentTimer = null;
 
     // validate command
     var i, found = false;
@@ -247,6 +250,10 @@ atFormat.AtCommand = function(command, newValue, callback) {
         command = "";
     }
 
+    this.isValid = function() {
+        return !S(command).isEmpty();
+    };
+
     this.getCommandString = function() {
         var commandString = '';
 
@@ -262,17 +269,30 @@ atFormat.AtCommand = function(command, newValue, callback) {
         return commandString;
     };
 
-    this.setStatusSent = function() {
-        this.sentTime = true;
+    this.setStatusSent = function(timerObject) {
+        self.sentTime = true;
+        self.sendTimer = timerObject;
     };
 
-    this.callCallback = function(tracker) {
+    this.finishAndCallCallback = function(tracker, errortext) {
+        // clear Timer and set finishedTime
+        if(self.sendTimer) clearTimeout(self.sendTimer);
+        self.finishedTime = true;
+
+        if(!S(errortext).isEmpty()) self.errortext = errortext;
+
         if(self.callback) {
             if (self.result) {
+
+                self.result = true; // ensure boolean not null value
                 self.callback(null, tracker, self.responseData);
             }
             else {
-                self.callback(new Error("Tracker returned error for command " + self.command), tracker, self.responseData);
+                self.result = false; // ensure boolean not null value
+
+                if(S(self.errortext).isEmpty()) self.errortext = "Unknown Error happened for command " + self.command;
+
+                self.callback(new Error(self.errortext), tracker, self.responseData);
             }
         }
     };
@@ -297,6 +317,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
         if(dataLine[1] === "OK:" || dataLine[1] === "ERROR:") {
             // we got an header
             self.result = dataLine[1] === "OK:";
+            if(!self.result) self.errortext = "Tracker returned ERROR";
         }
         else {
             // we got a data line
