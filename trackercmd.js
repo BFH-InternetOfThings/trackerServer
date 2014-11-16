@@ -51,12 +51,12 @@ rl.on('line', function(line) {
             }
 
             // Example: 1001 VBAT
-            trackertcpsrv.sendCommand(parts[0],parts[1],parts[2], function(err, tracker, response) {
+            trackertcpsrv.sendCommand(parts[0],parts[1],parts[2], function(err, tracker, response, timeUsedInMS) {
                 if(err) {
                     console.log(err);
                 }
                 else {
-                    console.log(tracker.trackerID, response);
+                    console.log(tracker.trackerID, timeUsedInMS + "ms", response);
                 }
                 rl.prompt();
             });

@@ -3,7 +3,7 @@
  */
 var Parser = require('binary-parser').Parser;
 var S = require('string');
-var moment = require('moment');
+var Moment = require('moment');
 
 var atFormat = {};
 
@@ -115,7 +115,7 @@ atFormat.atBinaryResponsePacket = new Parser()
 atFormat.getMomentFromBinaryObject = function(dataObject) {
     dataObject.month -= 1;
     dataObject.millisecond = 0;
-    return moment.utc(dataObject);
+    return Moment.utc(dataObject);
 };
 
 atFormat.generateBinaryAcknowledge = function(transactionID, success) {
@@ -218,7 +218,8 @@ atFormat.AtCommand = function(command, newValue, callback) {
     self.newValue = !S(newValue).isEmpty() ? newValue.toString() : "";
     self.sentTime = null;
     self.finishedTime = null;
-    self.responseData = [];
+    self.rawResponseData = [];
+    //self.responseData = null;
     self.outstandingLineCount = 0;
     self.result = false;
     self.errortext = "";
@@ -272,14 +273,15 @@ atFormat.AtCommand = function(command, newValue, callback) {
     };
 
     this.setStatusSent = function(timerObject) {
-        self.sentTime = true;
+        self.sentTime = Moment();
         self.sendTimer = timerObject;
     };
 
     this.finishAndCallCallback = function(tracker, errortext) {
         // clear Timer and set finishedTime
         if(self.sendTimer) clearTimeout(self.sendTimer);
-        self.finishedTime = true;
+        self.finishedTime = Moment();
+        var difference = self.sentTime ? self.finishedTime.diff(self.sentTime) : null;
 
         if(!S(errortext).isEmpty()) self.errortext = errortext;
 
@@ -292,14 +294,14 @@ atFormat.AtCommand = function(command, newValue, callback) {
                 }
 
                 self.result = true; // ensure boolean not null value
-                self.callback(null, tracker, self.responseData);
+                self.callback(null, tracker, self.rawResponseData, difference);
             }
             else {
                 self.result = false; // ensure boolean not null value
 
                 if(S(self.errortext).isEmpty()) self.errortext = "Unknown Error happened for command " + self.command;
 
-                self.callback(new Error(self.errortext), tracker, self.responseData);
+                self.callback(new Error(self.errortext), tracker, self.rawResponseData, difference);
             }
         }
     };
@@ -328,7 +330,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
         }
         else {
             // we got a data line
-            self.responseData.push(dataLine[3]);
+            self.rawResponseData.push(dataLine[3]);
         }
 
         self.outstandingLineCount -= 1;

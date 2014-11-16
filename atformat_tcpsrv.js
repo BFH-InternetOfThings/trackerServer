@@ -7,6 +7,7 @@ var net = require('net');
 var atFormat = require('./atformat');
 var debug = require('debug')('atFormatTCPSrv');
 var S = require('string');
+var Long = require("long");
 
 // Start a TCP Server
 module.exports = net.createServer(function (socket) {
@@ -17,22 +18,22 @@ module.exports = net.createServer(function (socket) {
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
 
-    socket.sendCommand = function (command, newValue, callback) {
+    socket.sendCommand = function (newCommand) {
 
-        var newCommand = new atFormat.AtCommand(command, newValue, callback);
+        if(newCommand) {
+            if (newCommand.isValid()) {
 
-        if (newCommand.isValid()) {
+                if (!socket.trackerID) {
+                    // the Tracker sends a hearbeat after every connect
+                    // if trackerID is null, then this heartbeat didn't get in until now
+                    newCommand.finishAndCallCallback(socket, "No commands can be sent until initial tracker handshake is done");
+                }
 
-            if (!socket.trackerID) {
-                // the Tracker sends a hearbeat after every connect
-                // if trackerID is null, then this heartbeat didn't get in until now
-                newCommand.finishAndCallCallback(socket, "No commands can be sent until initial tracker handshake is done");
+                socket.commandQueue.push(newCommand);
             }
-
-            socket.commandQueue.push(newCommand);
-        }
-        else {
-            newCommand.finishAndCallCallback(socket, "Invalid command");
+            else {
+                newCommand.finishAndCallCallback(socket, "Invalid command");
+            }
         }
 
         if (socket.commandQueue.length == 0) {
@@ -71,8 +72,10 @@ module.exports = net.createServer(function (socket) {
     };
 
     socket._setTrackerID = function(id) {
-        if(S(id).isNumeric()) {
-            var newId = S(id).toInteger();
+        var idString = S(id);
+
+        if(!idString.isEmpty() && idString.isNumeric()) {
+            var newId = idString.toString();
             var oldId = socket.trackerID;
 
             var sentConnectedMessage = socket.trackerID == 0 || socket.trackerID == null;
@@ -206,11 +209,11 @@ module.exports = net.createServer(function (socket) {
         // Process Binary Message
         switch (packet.messageEncoding) {
             case 0x00: //atFormat.atAsyncStatusMessage,
+                var modemIDOrIMEI = (new Long(packet.message.modemID2, packet.message.modemID1, true)).toString();
+
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
-                    if(packet.message.modemID1) debug("WARNING: TrackerID Numbers greater than MAX_INTEGER are not supported and are converted to normal Integers!");
-
-                    socket._setTrackerID(packet.message.modemID2);
+                    socket._setTrackerID(modemIDOrIMEI);
 
                     module.exports.emit('heartbeatReceived', socket, packet.transactionID);
                 }
@@ -222,6 +225,7 @@ module.exports = net.createServer(function (socket) {
 
                     // GPS Position
                     var gpsObj = {
+                        modemIDorIMEI: modemIDOrIMEI,
                         devicetime: atFormat.getMomentFromBinaryObject(packet.message.data.rtc).toDate(),
                         gpstime: atFormat.getMomentFromBinaryObject(packet.message.data.gps).toDate(),
                         latitude: packet.message.data.latitude / 100000,
@@ -300,17 +304,31 @@ module.exports.clients = [];
 
 module.exports.sendCommand = function (trackerID, command, newValue, callback) {
 
-    trackerID = S(trackerID).toInteger();
+    var newCommand = new atFormat.AtCommand(command, newValue, callback);
+
+    var trackerIDString = S(trackerID);
+
+    if(trackerIDString.isEmpty()) {
+        newCommand.finishAndCallCallback(null, 'Tracker id is empty!');
+        return;
+    }
+
+    if(!trackerIDString.isNumeric()) {
+        newCommand.finishAndCallCallback(null, 'Tracker id ' + trackerID + ' is not numeric!');
+        return;
+    }
+
+    trackerID = trackerIDString.toString();
 
     for (var i = 0; i < module.exports.clients.length; i++) {
         var client = module.exports.clients[i];
         if (client.trackerID && client.trackerID === trackerID) {
-            client.sendCommand(command, newValue, callback);
+            client.sendCommand(newCommand);
             return;
         }
     }
 
-    callback(new Error('Tracker id ' + trackerID + ' not found!'));
+    newCommand.finishAndCallCallback(null, 'Tracker id ' + trackerID + ' not found!');
 };
 
 
