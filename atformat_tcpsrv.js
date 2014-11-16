@@ -28,16 +28,6 @@ module.exports = net.createServer(function (socket) {
 
             // do not send a command until the initial handshake is done
             newCommand.finishAndCallCallback(socket);
-
-            /* newCommand = new atFormat.AtCommand("MODID", "", function (err, tracker, response) {
-                if (err) {
-                    console.log(err);
-                }
-                else {
-                    socket.trackerID = response[0];
-                    module.exports.emit("trackerConnected", socket);
-                }
-            }); */
         }
 
         if (newCommand.isValid()) {
@@ -79,6 +69,31 @@ module.exports = net.createServer(function (socket) {
         }
         else {
             socket.write(atFormat.generateBinaryCommandRequest(socket.lastTransactionID + 1, commandObject.getCommandString()));
+        }
+    };
+
+    socket._setTrackerID = function(id) {
+        if(S(id).isNumeric()) {
+            var newId = S(id).toInteger();
+            var oldId = socket.trackerID;
+
+            var sentConnectedMessage = socket.trackerID == 0 || socket.trackerID == null;
+            var sentIdChangedMessage = !(oldId === newId);
+
+            socket.trackerID = newId;
+
+            if(sentConnectedMessage) module.exports.emit("trackerConnected", socket);
+            if(sentIdChangedMessage && !sentConnectedMessage) module.exports.emit("trackerIdChanged", socket, oldId);
+        }
+        else {
+            socket.sendCommand("MODID", "", function (err, tracker, response) {
+                 if (err) {
+                    console.log(err);
+                 }
+                 else {
+                     socket._setTrackerID(response[0]);
+                 }
+             });
         }
     };
 
@@ -162,10 +177,7 @@ module.exports = net.createServer(function (socket) {
 
                 debug("ASCII Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
 
-                if(!socket.trackerID) {
-                    socket.trackerID = asciiAck.modemID;
-                    module.exports.emit("trackerConnected", socket);
-                }
+                socket._setTrackerID(asciiAck.modemID);
 
                 module.exports.emit('heartbeatReceived', socket, asciiAck.sequenceID);
 
@@ -202,10 +214,7 @@ module.exports = net.createServer(function (socket) {
                     // heartbeat
                     debug("Binary Heartbeat no. " + packet.transactionID + " from modem id " + packet.message.modemID2 + " received!");
 
-                    if(!socket.trackerID) {
-                        socket.trackerID = packet.message.modemID2;
-                        module.exports.emit("trackerConnected", socket);
-                    }
+                    socket._setTrackerID(packet.message.modemID2);
 
                     module.exports.emit('heartbeatReceived', socket, packet.transactionID);
                 }
@@ -290,6 +299,8 @@ module.exports.clients = [];
 
 
 module.exports.sendCommand = function (trackerID, command, newValue, callback) {
+
+    trackerID = S(trackerID).toInteger();
 
     for (var i = 0; i < module.exports.clients.length; i++) {
         var client = module.exports.clients[i];

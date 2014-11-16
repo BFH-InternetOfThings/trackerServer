@@ -284,6 +284,11 @@ atFormat.AtCommand = function(command, newValue, callback) {
         if(self.callback) {
             if (self.result) {
 
+                // FIX for MODID command
+                if(self.command === "MODID" && !S(self.newValue).isEmpty()) {
+                    tracker._setTrackerID(self.newValue)
+                }
+
                 self.result = true; // ensure boolean not null value
                 self.callback(null, tracker, self.responseData);
             }

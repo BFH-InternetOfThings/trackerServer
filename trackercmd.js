@@ -75,6 +75,10 @@ trackertcpsrv.on('trackerDisconnected', function(tracker) {
     console.log('Tracker ' + tracker.trackerID + " disconnected!");
 });
 
+trackertcpsrv.on('trackerIdChanged', function(tracker, oldID) {
+    console.log('Tracker changed his ID from ' + oldID + ' to ' + tracker.trackerID + "!");
+});
+
 trackertcpsrv.on('gpsDataReceived', function(tracker, gps) {
     console.log('Tracker ' + tracker.trackerID + " sent GPS: ", gps);
 });
