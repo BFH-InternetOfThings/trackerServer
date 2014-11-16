@@ -213,18 +213,20 @@ atFormat.CommandList.push({ name: "SNDGA", dataLines: 0, readOnly: false, descri
 
 // Commands with one Data line for question, only command response line on error or for set
 atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
+                                                successHandler: function(tracker, commandObj) {
+                                                    if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
+                                                        tracker._setTrackerID(commandObj.newValue)
+                                                    }
+                                                }});
+/* atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
     parseResponse: function(rawResponseData) {
         return { moduleID: rawResponseData[0] };
     },
     getRawStringValue: function(newValueObject) {
         return newValueObject.modid;
     },
-    successHandler: function(tracker, commandObj) {
-        if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
-            tracker._setTrackerID(commandObj.newValue)
-        }
-    }
-});
+
+}); */
 atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "APN", dataLines: 1, readOnly: false, description: "ToDo" });
@@ -253,7 +255,12 @@ atFormat.CommandList.push({ name: "DNS", dataLines: 1, readOnly: false, descript
 atFormat.CommandList.push({ name: "MSGQ", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "VEXT", dataLines: 1, readOnly: true, description: "Get external voltage in mV" });
 atFormat.CommandList.push({ name: "VBAT", dataLines: 1, readOnly: true, description: "Get battery voltage in mV" });
-atFormat.CommandList.push({ name: "VERSION", dataLines: 1, readOnly: true, description: "Get firmware version and device info" });
+atFormat.CommandList.push({ name: "VERSION", dataLines: 1, readOnly: true, description: "Get firmware version and device info" ,
+                                                parseResponse: function(rawResponseData) {
+                                                    var parts = rawResponseData[0].split(",");
+                                                    //$VERSION=<FW Version>,<HW Version>,<GSM Version> }
+                                                    return { firmwareVersion: parts[0], hardwareVersion: parts[1], gsmVersion: parts[2], deviceType: parts[3] };
+                                                } });
 atFormat.CommandList.push({ name: "QUST", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "IMEI", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "IP", dataLines: 1, readOnly: false, description: "ToDo" });
