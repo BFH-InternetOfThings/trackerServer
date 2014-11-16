@@ -67,7 +67,6 @@ rl.on('line', function(line) {
 
 });
 
-
 trackertcpsrv.on('trackerConnected', function(tracker) {
    console.log('Tracker ' + tracker.trackerID + " connected!");
 });
@@ -90,6 +89,10 @@ trackertcpsrv.on('GarminDataReceived', function(tracker, txtObj) {
 
 trackertcpsrv.on('OBDDataReceived', function(tracker, txtObj) {
     console.log('Tracker ' + tracker.trackerID + " sent OBD Data: ", txtObj);
+});
+
+trackertcpsrv.on('heartbeatReceived', function(tracker, nr) {
+    console.log('Tracker ' + tracker.trackerID + " sent Heartbeat Nr. " + nr);
 });
 
 trackertcpsrv.listen(config.port, function(err) {

@@ -161,6 +161,7 @@ module.exports = net.createServer(function (socket) {
 
                 socket.isASCIIFormat = true;
                 debug("ASCII Heartbeat no. " + asciiAck.sequenceID + " from modem id " + asciiAck.modemID + " received!");
+                module.exports.emit('heartbeatReceived', socket, asciiAck.sequenceID);
                 return;
             }
             catch (err) {
@@ -190,6 +191,8 @@ module.exports = net.createServer(function (socket) {
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
                     debug("Binary Heartbeat no. " + packet.transactionID + " from modem id " + packet.message.modemID2 + " received!");
+                    module.exports.emit('heartbeatReceived', socket, packet.transactionID);
+
                 }
                 else {
                     // GPS Position
