@@ -1,7 +1,47 @@
 doctype html
 html
-  head
-    title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
-  body
-    block content
+head
+    title Smoje Tracker
+    meta(charset='utf-8')
+    link(rel='shortcut icon', href='images/favicon.ico', type='image/x-icon')
+    link(rel='stylesheet', type='text/css', media='screen', href='/stylesheets/prettyPhoto.css')
+    link(rel='stylesheet', type='text/css', media='screen', href='/stylesheets/screen.css')
+    link(rel='stylesheet', type='text/css', media='print', href='/stylesheets/print.css')
+
+    //if lt IE 9
+      script(src='//html5shiv.googlecode.com/svn/trunk/html5.js')
+    body.index
+        #header
+            #headerTop
+                .wrapper
+                    a(href='https://www.facebook.com/smuoy', target='_blank', title='Facebook')
+                        i.fa.fa-facebook
+                    a(href='https://www.twitter.com/smuoy', title='Twitter')
+                        i.fa.fa-twitter
+                    a(href='#', title='Google Plus')
+                        i.fa.fa-google-plus
+            .wrapper
+                #nav
+                    ul
+                        li
+                            a.on(href='http://www.smoje.ch/') Smoje Website
+                        li
+                            a(href='project.htm') Trackerliste
+                a(href='index.htm')
+                    img#logo(src='/images/logo.png', alt='')
+        #mapWrapper
+            #mapHolder
+        #contentWrapper
+            #content
+                .wrapper
+                    .index
+                        block content
+            #footer
+                .wrapper
+
+            script(src='/javascripts/jquery-1.10.1.min.js')
+            script(src='/javascripts/jquery.prettyPhoto.js')
+            script(src='//cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.3/moment.min.js')
+            script(src='/javascripts/core.js')
+            script(type='text/javascript', src='https://maps.googleapis.com/maps/api/js?key=AIzaSyDjzb731OMCmBZDYBSuXB0y1yN5srAzqvM')
+            script(type='text/javascript', src='/javascripts/smoje.js')
