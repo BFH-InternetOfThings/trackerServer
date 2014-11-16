@@ -14,4 +14,4 @@ exports.projectName = 'Smoje Tracker Server';
 exports.systemEmail = 'roger.jaggi@gmail.com';
 
 exports.sessionCookieName = 'trackerSrv.sid';
-exports.cryptoKey = 'Th32asdfl2as';
+exports.cryptoKey = 'Thuiuddsdfl2as';
