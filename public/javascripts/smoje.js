@@ -15,7 +15,7 @@ function initialize() {
         zoom: 10
     };
     var map = new google.maps.Map(document.getElementById('mapHolder'), mapOptions);
-    var infowindow = new google.maps.InfoWindow();
+
 
     var image = {
         url: '/images/map-marker.png',
@@ -27,6 +27,8 @@ function initialize() {
         anchor: new google.maps.Point(16, 44)
     };
 
+    var infowindow = new google.maps.InfoWindow();
+
     $.ajax({
         dataType: "json",
         url: "/smoje-api/v1/trackerList",
@@ -36,20 +38,9 @@ function initialize() {
             {
                 var tracker = data[i];
 
-                console.log(tracker);
-
                 var trackerPoint =  new google.maps.LatLng(tracker.lastPosition.latitude , tracker.lastPosition.longitude);
 
-                var contentString = '<div id="mapContent">'+
-                    '<h1 class="mapHeading">Tracker ' + tracker.deviceID + '</h1>'+
-                    '<div id="mapContent">'+
-                    '<p><b>Last update:</b><br />' + moment(tracker.timeUpdated).format("LLL")  + '</p> ' +
-                    '<p><b>Status:</b> ' + ( tracker.status === "a" ? "Connected" : "Disconnected" ) + '</p> ' +
-                    '<p><b>Position:</b> ' + tracker.lastPosition.latitude + ' / ' + tracker.lastPosition.longitude + '</p> ' +
-                    '<p><b>Battery Voltage:</b> ' + tracker.lastBatteryVoltage + 'V</p> ' +
-                    '<p><b>Extern Voltage:</b> ' + tracker.lastExternVoltage + 'V</p> ' +
-                    '</div>'+
-                    '</div>';
+
 
                 var marker = new google.maps.Marker({
                     position: trackerPoint,
@@ -59,11 +50,35 @@ function initialize() {
                 });
 
                 google.maps.event.addListener(marker, 'click', function() {
-                    infowindow.setContent(contentString);
-                    infowindow.close();
-                    infowindow.open(map,marker);
-                });
 
+                    $.ajax({
+                        dataType: "json",
+                        url: "/smoje-api/v1/trackerList",
+                        success: function (data2) {
+
+                            for (var i = 0; i < data2.length; i++) {
+                                if (data2[i].deviceID === tracker.deviceID) {
+                                    var tracker2 = data2[i];
+                                    var contentString = '<div id="mapContent">'+
+                                        '<h1 class="mapHeading">Tracker ' + tracker2.deviceID + '</h1>'+
+                                        '<div id="mapContent">'+
+                                        '<p><b>Last update:</b><br />' + moment(tracker2.timeUpdated).format("LLL")  + '</p> ' +
+                                        '<p><b>Status:</b> ' + ( tracker2.status === "a" ? "Connected" : "Disconnected" ) + '</p> ' +
+                                        '<p><b>Position:</b> ' + tracker2.lastPosition.latitude + ' / ' + tracker2.lastPosition.longitude + '</p> ' +
+                                        '<p><b>Battery Voltage:</b> ' + tracker2.lastBatteryVoltage + 'V</p> ' +
+                                        '<p><b>Extern Voltage:</b> ' + tracker2.lastExternVoltage + 'V</p> ' +
+                                        '</div>'+
+                                        '</div>';
+
+                                    infowindow.setContent(contentString);
+                                    infowindow.close();
+                                    infowindow.open(map, marker);
+                                    return;
+                                }
+                            }
+                        }
+                    });
+                });
             }
         }
     });
