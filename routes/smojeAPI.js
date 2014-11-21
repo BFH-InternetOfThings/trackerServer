@@ -1,15 +1,5 @@
 'use strict';
-
-exports.listTrackers = function(req, res){
-
-    res.
-    res.render('index', {
-        oauthMessage: ''
-    });
-
-};
-
-exports.listTrackers = function(req, res){
+exports.listTrackerExtended = function(req, res){
 
     var TrackerModel = req.app.db.model('tracker');
 
@@ -18,22 +8,19 @@ exports.listTrackers = function(req, res){
     })
 };
 
-exports.getTrackerGPS = function(req, res){
+exports.listTracker = function(req, res){
 
     var TrackerModel = req.app.db.model('tracker');
 
-    TrackerModel.findOne({ _id: req.params.trackerID }, function(err, tracker) {
-        if (err) {
-            res.status(500);
-            return res.send(err);
+
+    TrackerModel.find({}, function(err, trackers) {
+        var trackerList = [];
+
+        for(var i = 0; i < trackers.length; i++) {
+            trackerList.push(trackers[i].deviceID);
         }
 
-        if(!tracker) {
-            res.status(404);
-            return res.send(err);
-        }
-
-        res.json(tracker.lastPosition);
+        res.json(trackerList);
     });
 };
 
@@ -41,7 +28,7 @@ exports.getTrackerRelay = function(req, res){
 
     var TrackerModel = req.app.db.model('tracker');
 
-    TrackerModel.findOne({ _id: req.params.trackerID }, function(err, tracker) {
+    TrackerModel.findOne({ deviceID: req.params.trackerID }, function(err, tracker) {
         if (err) {
             res.status(500);
             return res.send(err);
@@ -53,7 +40,7 @@ exports.getTrackerRelay = function(req, res){
         }
 
         res.json({
-            status: tracker.relay1
+            status: tracker.relay1 ? tracker.relay1 : "unknown"
         });
     });
 };
@@ -62,7 +49,7 @@ exports.getTrackerStatus = function(req, res){
 
     var TrackerModel = req.app.db.model('tracker');
 
-    TrackerModel.findOne({ _id: req.params.trackerID }, function(err, tracker) {
+    TrackerModel.findOne({ deviceID: req.params.trackerID }, function(err, tracker) {
         if (err) {
             res.status(500);
             return res.send(err);
@@ -73,13 +60,6 @@ exports.getTrackerStatus = function(req, res){
             return res.send(err);
         }
 
-        res.json({
-            smojeid: tracker.deviceID,
-            powerstatus: {
-                vbattery: tracker.lastBatteryVoltage,
-                vextern: tracker.lastExternVoltage,
-                estimatedruntime: tracker.estimatedruntime
-            }
-        });
+        res.json(tracker);
     });
 };

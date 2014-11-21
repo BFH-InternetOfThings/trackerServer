@@ -29,8 +29,8 @@ exports = module.exports = function(app, passport) {
     var smojeAPIVersion = 'smoje-api/v1';
     //app.all('/' + apiVersion + '*', app.utilities.ensureAuthenticated);
 
-    app.get('/' + smojeAPIVersion + '/trackerList', smojeAPI.listTrackers);
-    app.get('/' + smojeAPIVersion + '/:trackerID/gps', smojeAPI.getTrackerGPS);
+    app.get('/' + smojeAPIVersion + '/trackerList', smojeAPI.listTrackerExtended);
+    app.get('/' + smojeAPIVersion + '/list', smojeAPI.listTracker);
     app.get('/' + smojeAPIVersion + '/:trackerID/relay/:action', smojeAPI.getTrackerRelay);
     app.get('/' + smojeAPIVersion + '/:trackerID/status', smojeAPI.getTrackerStatus);
 
