@@ -5,6 +5,7 @@ var Parser = require('binary-parser').Parser;
 var S = require('string');
 var Moment = require('moment');
 var _ = require('underscore-node');
+var events = require('events');
 
 var atFormat = {};
 
@@ -148,9 +149,17 @@ atFormat.parseASCII_GPS = function(gpsstring) {
 
     if(GPSData.length == 15) {
 
-        //TODO: Code it
-
-        return true;
+        return {
+            modemIDorIMEI: GPSData[0],
+            devicetime: GPSData[13],
+            gpstime: GPSData[1],
+            latitude: GPSData[2],
+            longitude: GPSData[3],
+            altitude: GPSData[6],
+            speed: GPSData[4],
+            direction: GPSData[5],
+            satelliteCount: [7]
+        };
     }
 
     return null;
@@ -161,9 +170,14 @@ atFormat.parseASCII_TXT = function(responseString) {
 
     //$SNDTXT:< Modem_ID >,<Text data>,<RTC time>0x0d0x0a
     if(response.startsWith("$SNDTXT:")) {
-        //TODO: Code it
 
-        return true;
+        var parts = S(gpsstring.toString().substring(8)).parseCSV(',', null);
+
+        return {
+            modemIDorIMEI: parts[0],
+            devicetime: parts[2],
+            message: parts[1]
+        };
     }
 
     return null;
@@ -174,9 +188,12 @@ atFormat.parseASCII_Garmin = function(responseString) {
 
     //$SNDGA:<Garmin data>0x0d0x0a
     if(response.startsWith("$SNDGA:")) {
-        //TODO: Code it
+        var parts = S(gpsstring.toString().substring(7)).parseCSV(',', null);
 
-        return true;
+        return {
+            message: parts[0]
+        };
+
     }
 
     return null;
@@ -187,13 +204,62 @@ atFormat.parseASCII_OBD = function(responseString) {
 
     //$SNDOBD:<Modem_ID>,<Longitude>,<Latitude>,<OBD response>,<RTC time>0x0d0x0a
     if(response.startsWith("$SNDOBD:")) {
-        //TODO: Code it
+        var parts = S(gpsstring.toString().substring(7)).parseCSV(',', null);
 
-        return true;
+        return {
+            modemIDorIMEI: parts[0],
+            longitude: parts[1],
+            latitude: parts[2],
+            devicetime: parts[4],
+            obdresponse: parts[3]
+        };
     }
 
     return null;
 };
+
+function AtCommandDefinition(arg) {
+
+    var self = this;
+    self.config = arg;
+
+    events.EventEmitter.call(this);
+
+    this.isCommand = function(commandname) {
+        return commandname == self.config.name;
+    };
+
+    this.isReadOnly = function() {
+        return !!self.config.readOnly;
+    };
+
+    this.getDataLines = function() {
+        return self.config.dataLines;
+    };
+
+    this.getDescription = function() {
+        return self.config.description;
+    };
+
+    this.callFailureHandlers = function(tracker, command) {
+        this.emit('onFailure', tracker, command);
+    };
+
+    this.callSuccessHandlers = function(tracker, command) {
+        this.emit('onSuccess', tracker, command);
+    };
+}
+
+AtCommandDefinition.prototype.__proto__ = events.EventEmitter.prototype;
+
+/*
+var frontDoor = new AtCommandDefinition('brown');
+
+frontDoor.on('open', function() {
+    console.log('ring ring ring');
+});
+frontDoor.open();
+*/
 
 atFormat.CommandList = [];
 
@@ -227,6 +293,7 @@ atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, descri
     },
 
 }); */
+atFormat.CommandList.push({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" });
 atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "APN", dataLines: 1, readOnly: false, description: "ToDo" });
