@@ -30,7 +30,7 @@ app.db.once('open', function () {
 });
 
 app.mubsub = {};
-app.mubsub.client = mubsub("mongodb://" + config.mongodb.uri);
+app.mubsub.client = mubsub(config.mongodb.uri);
 app.mubsub.channel = app.mubsub.client.channel('CommandQueue');
 
 

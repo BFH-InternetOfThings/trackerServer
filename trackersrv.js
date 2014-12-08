@@ -54,7 +54,7 @@ var getStatus = function(tracker) {
 
 // setup mubsub =======================================================================
 trackersrv.mubsub = {};
-trackersrv.mubsub.client = mubsub("mongodb://" + config.mongodb.uri);
+trackersrv.mubsub.client = mubsub(config.mongodb.uri);
 trackersrv.mubsub.channel = trackersrv.mubsub.client.channel('CommandQueue');
 
 /*
