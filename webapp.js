@@ -13,6 +13,7 @@ var express = require('express'),
     session = require('express-session'),
     mongoStore = require('connect-mongo')(session),
     config = require('./config'),
+    mubsub = require('mubsub'),
     debug = require('debug')('webapp');
 
 // setup app and config ========================================================================
@@ -27,6 +28,11 @@ app.db.on('error', console.error.bind(console, 'mongoose connection error with d
 app.db.once('open', function () {
     debug('connected to mongoose db: ' + config.mongodb.uri);
 });
+
+app.mubsub = {};
+app.mubsub.client = mubsub("mongodb://" + config.mongodb.uri);
+app.mubsub.channel = app.mubsub.client.channel('CommandQueue');
+
 
 // setup data models ========================================================================
 require('./models/Tracker')(app, mongoose);

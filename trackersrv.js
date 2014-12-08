@@ -5,6 +5,7 @@
 var mongoose = require('mongoose'),
     config = require('./config'),
     debug = require('debug')('trackersrv'),
+    mubsub = require('mubsub'),
     S = require('string');
 
 // setup server and config ========================================================================
@@ -49,6 +50,33 @@ var getStatus = function(tracker) {
         }));
     }));
 };
+
+
+// setup mubsub =======================================================================
+trackersrv.mubsub = {};
+trackersrv.mubsub.client = mubsub("mongodb://" + config.mongodb.uri);
+trackersrv.mubsub.channel = trackersrv.mubsub.client.channel('CommandQueue');
+
+/*
+req.app.mubsub.channel.publish('command', {
+    id: uuid1,
+    deviceID: tracker.deviceID,
+    command: "RELAY",
+    newValue: value
+}); */
+
+trackersrv.mubsub.channel.subscribe('command', function(message) {
+
+    trackersrv.sendCommand(message.deviceID, message.command, message.newValue, function(err, tracker, response, timeUsedInMS) {
+        trackersrv.mubsub.channel.publish(message.id, {
+            success: !err,
+            resultString: response,
+            timeUsedInMS: timeUsedInMS
+        });
+    });
+    res.json(message);
+});
+
 
 // setup listeners ========================================================================
 trackersrv.on('trackerConnected', function(tracker) {
@@ -131,17 +159,17 @@ trackersrv.on('gpsDataReceived', function(tracker, gps) {
 
 trackersrv.on('TxtDataReceived', function(tracker, txtObj) {
     console.log('Tracker ' + tracker.trackerID + " sent TextMessage: ", txtObj);
-    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent TextMessage:' + JSON.stringify(gps));
+    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent TextMessage:' + JSON.stringify(txtObj));
 });
 
 trackersrv.on('GarminDataReceived', function(tracker, txtObj) {
     console.log('Tracker ' + tracker.trackerID + " sent Garmin Data: ", txtObj);
-    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent Garmin Data:' + JSON.stringify(gps));
+    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent Garmin Data:' + JSON.stringify(txtObj));
 });
 
 trackersrv.on('OBDDataReceived', function(tracker, txtObj) {
     console.log('Tracker ' + tracker.trackerID + " sent OBD Data: ", txtObj);
-    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent OBD Data:' + JSON.stringify(gps));
+    tracker.trackerDBEntry.addLogEntry(null, 'Tracker sent OBD Data:' + JSON.stringify(txtObj));
 });
 
 trackersrv.on('heartbeatReceived', function(tracker, nr) {

@@ -37,6 +37,8 @@
         "should": "^3.3.0",
         "debug": "~2.0.0",
         "binary-parser": "*",
-        "string": "*"
+        "string": "*",
+        "mubsub": "1.0.4",
+        "node-uuid": "*"
     }
 }
