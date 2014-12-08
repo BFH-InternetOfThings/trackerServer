@@ -169,11 +169,13 @@ module.exports = net.createServer(function (socket) {
     };
 
     // Handle incoming messages from clients.
-    socket.on('data', function (data) {
+    socket.on('data', function(data) {
 
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
             try {
+                console.log(data);
+
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
 
                 socket.isASCIIFormat = true;
