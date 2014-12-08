@@ -195,10 +195,10 @@ module.exports = net.createServer(function (socket) {
             }
         }
         else if (data.readUInt16BE(0) == 0xfaf9) {
-            // Netmodule identifier
+            // Netmodule heartbeat
             try {
-                var sequenceID = data.toString('ascii', 2, 4);
-                var modemID = data.toString('ascii', 4);
+                var sequenceID = S(data.toString('ascii', 2, 4)).toInteger();
+                var modemID = S(data.toString('ascii', 4)).toInteger();
 
                 console.log("Netmodule ", modemID, sequenceID);
                 socket.isASCIIFormat = true;
