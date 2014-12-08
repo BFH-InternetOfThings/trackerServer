@@ -171,10 +171,11 @@ module.exports = net.createServer(function (socket) {
     // Handle incoming messages from clients.
     socket.on('data', function(data) {
 
+        console.log(data);
+
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
             try {
-                console.log(data);
 
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
 
@@ -183,6 +184,28 @@ module.exports = net.createServer(function (socket) {
                 socket._setTrackerID(asciiAck.modemID);
 
                 module.exports.emit('heartbeatReceived', socket, asciiAck.sequenceID);
+
+                // answer handshake
+                socket.write(data);
+
+                return;
+            }
+            catch (err) {
+                debug(err, data);
+            }
+        }
+        else if (data.readUInt16BE(0) == 0xfaf9) {
+            // Netmodule identifier
+            try {
+                var sequenceID = data.toString('ascii', 2, 4);
+                var modemID = data.toString('ascii', 4);
+
+                console.log("Netmodule ", modemID, sequenceID);
+                socket.isASCIIFormat = true;
+
+                socket._setTrackerID(modemID);
+
+                module.exports.emit('heartbeatReceived', socket, sequenceID);
 
                 // answer handshake
                 socket.write(data);
