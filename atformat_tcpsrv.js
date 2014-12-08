@@ -171,8 +171,6 @@ module.exports = net.createServer(function (socket) {
     // Handle incoming messages from clients.
     socket.on('data', function(data) {
 
-        console.log(data);
-
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
             try {
@@ -200,7 +198,6 @@ module.exports = net.createServer(function (socket) {
                 var sequenceID = S(data.toString('ascii', 2, 4)).toInteger();
                 var modemID = S(data.toString('ascii', 4)).toInteger();
 
-                console.log("Netmodule ", modemID, sequenceID);
                 socket.isASCIIFormat = true;
 
                 socket._setTrackerID(modemID);
