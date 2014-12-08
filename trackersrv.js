@@ -74,7 +74,6 @@ trackersrv.mubsub.channel.subscribe('command', function(message) {
             timeUsedInMS: timeUsedInMS
         });
     });
-    res.json(message);
 });
 
 
