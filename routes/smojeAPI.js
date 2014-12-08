@@ -50,18 +50,18 @@ exports.getTrackerRelay = function(req, res){
                 res.json(message);
             });
 
-            var value = null;
+            var value = 20; //relay 2
             if(req.params.action == "on") {
-                value = 1;
+                value += 1;
             }
             else if(req.params.action == "off") {
-                value = 0;
+                value += 0;
             }
             else if(req.params.action == "cycle") {
-                value = 2;
+                value += 2;
             }
             else if(req.params.action == "longcycle") {
-                value = 3;
+                value += 3;
             }
 
             req.app.mubsub.channel.publish('command', {

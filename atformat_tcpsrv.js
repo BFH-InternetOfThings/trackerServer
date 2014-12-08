@@ -201,7 +201,9 @@ module.exports = net.createServer(function (socket) {
             socket.lastTransactionID = packet.transactionID;
         }
         catch (err) {
-            console.log(err);
+            if (socket.isASCIIFormat = false) {
+                console.log(err);
+            }
 
             // Process ASCII Message
             socket.isASCIIFormat = true;
