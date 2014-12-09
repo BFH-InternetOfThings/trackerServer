@@ -33,6 +33,14 @@ app.mubsub = {};
 app.mubsub.client = mubsub(config.mongodb.uri);
 app.mubsub.channel = app.mubsub.client.channel('CommandQueue');
 
+//CORS middleware
+var allowCrossDomain = function(req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+    next();
+};
 
 // setup data models ========================================================================
 require('./models/Tracker')(app, mongoose);
@@ -52,6 +60,7 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
 app.use(cookieParser());
+app.use(allowCrossDomain);
 app.use(require('stylus').middleware(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
