@@ -79,6 +79,36 @@ exports.getTrackerRelay = function(req, res){
     });
 };
 
+exports.sendCommand = function(req, res){
+
+    var TrackerModel = req.app.db.model('tracker');
+
+    TrackerModel.findOne({ deviceID: req.params.trackerID }, function(err, tracker) {
+        if (err) {
+            res.status(500);
+            return res.send(err);
+        }
+
+        if(!tracker) {
+            res.status(404);
+            return res.send(err);
+        }
+
+        var uuid1 = uuid.v1();
+
+        req.app.mubsub.channel.subscribe(uuid1, function(message) {
+            res.json(message);
+        });
+
+        req.app.mubsub.channel.publish('command', {
+            id: uuid1,
+            deviceID: tracker.deviceID,
+            command: req.params.cmd,
+            newValue: req.params.value
+        });
+    });
+};
+
 exports.getTrackerStatus = function(req, res){
 
     var TrackerModel = req.app.db.model('tracker');
