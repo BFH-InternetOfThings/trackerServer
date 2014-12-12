@@ -204,7 +204,6 @@ module.exports = net.createServer(function (socket) {
 
                 socket.deviceType = atFormat.DeviceTypes.NETMODULE;
                 socket.isASCIIFormat = true;
-                console.log("got Heartbeat", sequenceID, modemID);
 
                 socket._setTrackerID(modemID, false);
 
