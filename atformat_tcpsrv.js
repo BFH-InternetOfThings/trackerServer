@@ -331,6 +331,13 @@ module.exports = net.createServer(function (socket) {
         module.exports.emit("trackerDisconnected", socket);
     });
 
+    /*
+    socket.on('close', function(had_error) {
+        module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
+        module.exports.emit("trackerDisconnected", socket, had_error);
+    });
+    */
+
     // Put this new client in the list
     module.exports.clients.push(socket);
 });
@@ -368,6 +375,3 @@ module.exports.sendCommand = function (trackerID, command, newValue, callback) {
 
     newCommand.finishAndCallCallback(null, 'Tracker id ' + trackerID + ' not found!');
 };
-
-
-

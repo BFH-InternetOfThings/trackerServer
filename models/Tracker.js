@@ -4,6 +4,7 @@
 exports = module.exports = function(app, mongoose) {
     var trackerSchema = new mongoose.Schema({
         deviceID: { type: String },
+        deviceType: { type: String },
         lastPosition: { type: mongoose.Schema.Types.Mixed },
         lastBatteryVoltage: { type: Number },
         lastExternVoltage: { type: Number },

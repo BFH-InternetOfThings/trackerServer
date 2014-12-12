@@ -113,6 +113,7 @@ trackersrv.on('trackerConnected', function(tracker) {
 
         }
 
+        trackerDBEntry.deviceType = tracker.deviceType;
         trackerDBEntry.status = "a";
         trackerDBEntry.save();
 
