@@ -203,6 +203,7 @@ module.exports = net.createServer(function (socket) {
 
                 socket.deviceType = atFormat.DeviceTypes.NETMODULE;
                 socket.isASCIIFormat = true;
+                cnosole.log("got Heartbeat", sequenceID, modemID);
 
                 socket._setTrackerID(modemID);
 
