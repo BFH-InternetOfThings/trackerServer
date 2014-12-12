@@ -2,11 +2,11 @@ server = "tracker.xrj.ch";
 port = (int) "9090";
 // SmojeID
 sArName = explode(nb_config_get("network.hostname"));
-smojedd = "";
+smojeid = "";
 
 for (i = 0; i < length(sArName); i++) {
     if (isdigit(sArName[i])) {
-        smojedd = strcat(smojeid,sArName[i]);
+        smojeid = strcat(smojeid,sArName[i]);
     }
 }
 
