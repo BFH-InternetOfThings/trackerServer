@@ -127,3 +127,21 @@ exports.getTrackerStatus = function(req, res){
         res.json(tracker);
     });
 };
+
+exports.getGPSStatus = function(req, res) {
+    var TrackerModel = req.app.db.model('tracker');
+
+    TrackerModel.findOne({ deviceID: req.params.trackerID }, function(err, tracker) {
+        if (err) {
+            res.status(500);
+            return res.send(err);
+        }
+
+        if(!tracker) {
+            res.status(404);
+            return res.send(err);
+        }
+
+        res.json(tracker.lastPosition);
+    });
+};

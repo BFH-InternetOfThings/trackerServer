@@ -7,7 +7,8 @@ exports = module.exports = function(app, mongoose) {
         lastPosition: { type: mongoose.Schema.Types.Mixed },
         lastBatteryVoltage: { type: Number },
         lastExternVoltage: { type: Number },
-        lastEstimatedRuntime: { type: Number }
+        lastEstimatedRuntime: { type: Number },
+        lastWanStatus: { type: mongoose.Schema.Types.Mixed }
     });
 
     trackerSchema.methods.addLogEntry = function(request, response) {

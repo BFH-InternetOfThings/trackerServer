@@ -26,7 +26,7 @@ require('./models/PositionHistory')(trackersrv, mongoose);
 require('./models/ConnectionLog')(trackersrv, mongoose);
 require('./models/StatusHistory')(trackersrv, mongoose);
 
-var getStatus = function(tracker) {
+var getStatusCareU1 = function(tracker) {
 
     tracker.sendCommand(new trackersrv.AtCommand("vbat", null, function(err, tracker2, response, timeUsedInMS) {
         if(err) {
@@ -51,6 +51,22 @@ var getStatus = function(tracker) {
     }));
 };
 
+var getStatusNetModule = function(tracker) {
+
+    tracker.sendCommand(new trackersrv.AtCommand("wanstatus", null, function(err, tracker2, response, timeUsedInMS) {
+        if(err) {
+            debug('Error on updating NetModule WANSTATUS: ', err);
+            return;
+        }
+
+        tracker.trackerDBEntry.lastWanStatus = response;
+        tracker.trackerDBEntry.save();
+
+        tracker.trackerDBEntry.addLogEntry('Updated netModule WAN Status');
+        debug('Updated netModule WAN Status');
+
+    }));
+};
 
 // setup mubsub =======================================================================
 trackersrv.mubsub = {};
@@ -104,9 +120,12 @@ trackersrv.on('trackerConnected', function(tracker) {
 
         tracker.trackerDBEntry.addLogEntry(null, 'Tracker connected');
 
-        tracker.trackerAbfrageIntervall = setInterval(getStatus, 2 * 60 * 1000, tracker);
-
-        //getStatus(tracker); tracker isn't ready here
+        if(tracker.deviceType = trackersrv.DeviceTypes.NETMODULE) {
+            tracker.trackerAbfrageIntervall = setInterval(getStatusNetModule, 2 * 60 * 1000, tracker);
+        }
+        else {
+            tracker.trackerAbfrageIntervall = setInterval(getStatusCareU1, 2 * 60 * 1000, tracker);
+        }
     });
 });
 

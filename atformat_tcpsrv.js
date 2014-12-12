@@ -174,6 +174,7 @@ module.exports = net.createServer(function (socket) {
 
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
+            // CareU1 Heartbeat
             try {
 
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
@@ -195,7 +196,7 @@ module.exports = net.createServer(function (socket) {
             }
         }
         else if (data.readUInt16BE(0) == 0xfaf9) {
-            // Netmodule heartbeat
+            // Netmodule Heartbeat
             try {
                 var sequenceID = S(data.toString('ascii', 2, 4)).toInteger();
                 var modemID = S(data.toString('ascii', 4)).toInteger();
@@ -222,6 +223,9 @@ module.exports = net.createServer(function (socket) {
             var packet = atFormat.atBinaryResponsePacket.parse(data);
 
             debug("Received from tracker " + socket.trackerID, packet);
+
+            // binary protocoll is only supported on CAREU1 Tracker
+            socket.deviceType = atFormat.DeviceTypes.CAREU1_TRACKER;
             socket.isASCIIFormat = false;
             socket.lastTransactionID = packet.transactionID;
         }
@@ -334,6 +338,7 @@ module.exports = net.createServer(function (socket) {
 module.exports.clients = [];
 
 module.exports.AtCommand = atFormat.AtCommand;
+module.exports.DeviceTypes = atFormat.DeviceTypes;
 
 module.exports.sendCommand = function (trackerID, command, newValue, callback) {
 
