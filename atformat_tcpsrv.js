@@ -74,7 +74,7 @@ module.exports = net.createServer(function (socket) {
         }
     };
 
-    socket._setTrackerID = function(id) {
+    socket._setTrackerID = function(id, closeOnInvalidID) {
         var idString = S(id);
 
         if(!idString.isEmpty() && idString.isNumeric()) {
@@ -89,13 +89,16 @@ module.exports = net.createServer(function (socket) {
             if(sentConnectedMessage) module.exports.emit("trackerConnected", socket);
             if(sentIdChangedMessage && !sentConnectedMessage) module.exports.emit("trackerIdChanged", socket, oldId);
         }
+        else if(closeOnInvalidID) {
+            socket.end();
+        }
         else {
             socket.sendCommand("MODID", "", function (err, tracker, response) {
                  if (err) {
                     console.log(err);
                  }
                  else {
-                     socket._setTrackerID(response[0]);
+                     socket._setTrackerID(response[0], true);
                  }
              });
         }
@@ -182,9 +185,7 @@ module.exports = net.createServer(function (socket) {
                 socket.deviceType = atFormat.DeviceTypes.CAREU1_TRACKER;
                 socket.isASCIIFormat = true;
 
-                socket._setTrackerID(asciiAck.modemID);
-
-                module.exports.emit('heartbeatReceived', socket, asciiAck.sequenceID);
+                socket._setTrackerID(asciiAck.modemID, false);
 
                 // answer handshake
                 socket.write(data);
@@ -205,7 +206,7 @@ module.exports = net.createServer(function (socket) {
                 socket.isASCIIFormat = true;
                 console.log("got Heartbeat", sequenceID, modemID);
 
-                socket._setTrackerID(modemID);
+                socket._setTrackerID(modemID, false);
 
                 module.exports.emit('heartbeatReceived', socket, sequenceID);
 
@@ -250,7 +251,7 @@ module.exports = net.createServer(function (socket) {
 
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
-                    socket._setTrackerID(modemIDOrIMEI);
+                    socket._setTrackerID(modemIDOrIMEI, false);
 
                     module.exports.emit('heartbeatReceived', socket, packet.transactionID);
                 }

@@ -281,7 +281,7 @@ atFormat.CommandList.push({ name: "SNDGA", dataLines: 0, readOnly: false, descri
 atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
                                                 successHandler: function(tracker, commandObj) {
                                                     if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
-                                                        tracker._setTrackerID(commandObj.newValue)
+                                                        tracker._setTrackerID(commandObj.newValue, false)
                                                     }
                                                 }});
 /* atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
