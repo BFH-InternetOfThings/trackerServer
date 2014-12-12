@@ -89,18 +89,8 @@ module.exports = net.createServer(function (socket) {
             if(sentConnectedMessage) module.exports.emit("trackerConnected", socket);
             if(sentIdChangedMessage && !sentConnectedMessage) module.exports.emit("trackerIdChanged", socket, oldId);
         }
-        else if(closeOnInvalidID) {
-            socket.end();
-        }
         else {
-            socket.sendCommand("MODID", "", function (err, tracker, response) {
-                 if (err) {
-                    console.log(err);
-                 }
-                 else {
-                     socket._setTrackerID(response[0], true);
-                 }
-             });
+            socket.end();
         }
     };
 
