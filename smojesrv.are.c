@@ -119,28 +119,13 @@ while(1) {
 				send(sock, "ERROR:RELAY\n");
 			}
 		}
-		else if (left(msg,7) == "AT$VBAT") {
-            if (right(left(msg,8),1) == "?") { // read vbat
-                send(sock, "OK:VBAT\n");
-                send(sock, strcat("$VBAT=0\n"));
-            } else if (substr(msg,8,1) == "=") { // write vbat
-                send(sock, "ERROR:VBAT\n");
-            }
-        }
-		else if (left(msg,7) == "AT$VEXT") {
-            if (right(left(msg,8),1) == "?") { // read VEXT
-                send(sock, "OK:VEXT\n");
-                send(sock, strcat("$VEXT=0\n"));
-            } else if (substr(msg,8,1) == "=") { // write VEXT
-                send(sock, "ERROR:VEXT\n");
-            }
-        }
         else if (left(msg,12) == "AT$WANSTATUS") {
-            if (right(left(msg,12),1) == "?") { // read VEXT
-                send(sock, "OK:WANSTATUS\n");
+            if (right(left(msg,13),1) == "?") { // read status
+                printf("Received WAN-Status command, read and send it");
                 state = nb_status("wan");
-                send(sock, strcat("$STATUS=",struct_get(state , "WANLINK1_GATEWAY"),",",struct_get(state , "WANLINK1_STATE"),",",struct_get(state , "WANLINK1_STATE_UP_SINCE"),",",struct_get(state , "WANLINK1_DIAL_ATTEMPTS"),",",struct_get(state , "WANLINK1_DATA_UPLOADED"),",",struct_get(state , "WANLINK1_DIAL_SUCCESS"),",",struct_get(state , "WANLINK1_ADDRESS"),",",struct_get(state , "WANLINK1_DOWNLOAD_RATE"),",",struct_get(state , "WANLINK1_SERVICE_TYPE"),",",struct_get(state , "WANLINK1_UPLOAD_RATE"),",",struct_get(state , "WANLINK1_TYPE"),",",struct_get(state , "WANLINK1_DIAL_FAILURES"),",",struct_get(state , "WANLINK1_REGISTRATION_STATE"),",",struct_get(state , "WANLINK1_SIM"),",",struct_get(state , "WANLINK1_INTERFACE"),",",struct_get(state , "WANLINK1_DATA_DOWNLOADED"),",",struct_get(state , "WAN_HOTLINK"),",",struct_get(state , "WANLINK1_SIGNAL_STRENGTH"),"\n"));
-            } else if (substr(msg,12,1) == "=") { // write Status
+                send(sock, "OK:WANSTATUS\n");
+                send(sock, strcat("$WANSTATUS=",struct_get(state , "WANLINK1_GATEWAY"),",",struct_get(state , "WANLINK1_STATE"),",",struct_get(state , "WANLINK1_STATE_UP_SINCE"),",",struct_get(state , "WANLINK1_DIAL_ATTEMPTS"),",",struct_get(state , "WANLINK1_DATA_UPLOADED"),",",struct_get(state , "WANLINK1_DIAL_SUCCESS"),",",struct_get(state , "WANLINK1_ADDRESS"),",",struct_get(state , "WANLINK1_DOWNLOAD_RATE"),",",struct_get(state , "WANLINK1_SERVICE_TYPE"),",",struct_get(state , "WANLINK1_UPLOAD_RATE"),",",struct_get(state , "WANLINK1_TYPE"),",",struct_get(state , "WANLINK1_DIAL_FAILURES"),",",struct_get(state , "WANLINK1_REGISTRATION_STATE"),",",struct_get(state , "WANLINK1_SIM"),",",struct_get(state , "WANLINK1_INTERFACE"),",",struct_get(state , "WANLINK1_DATA_DOWNLOADED"),",",struct_get(state , "WAN_HOTLINK"),",",struct_get(state , "WANLINK1_SIGNAL_STRENGTH"),"\n"));
+            } else { // write Status
                 send(sock, "ERROR:WANSTATUS\n");
             }
         }

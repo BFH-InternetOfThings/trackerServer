@@ -351,6 +351,9 @@ atFormat.CommandList.push({ name: "VEXT", dataLines: 1, readOnly: true, descript
 atFormat.CommandList.push({ name: "VBAT", dataLines: 1, readOnly: true, description: "Get battery voltage in mV" });
 atFormat.CommandList.push({ name: "VERSION", dataLines: 1, readOnly: true, description: "Get firmware version and device info" ,
                                                 parseResponse: function(rawResponseData) {
+
+                                                    if(rawResponseData.length == 0) return null;
+
                                                     var parts = rawResponseData[0].split(",");
                                                     //$VERSION=<FW Version>,<HW Version>,<GSM Version> }
                                                     return { firmwareVersion: parts[0], hardwareVersion: parts[1], gsmVersion: parts[2], deviceType: parts[3] };

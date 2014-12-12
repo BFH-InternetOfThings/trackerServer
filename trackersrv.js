@@ -113,7 +113,19 @@ trackersrv.on('trackerConnected', function(tracker) {
 
         }
 
-        trackerDBEntry.deviceType = tracker.deviceType;
+        switch(tracker.deviceType) {
+            case trackersrv.DeviceTypes.CAREU1_TRACKER:
+                trackerDBEntry.deviceType = "CareU1 Tracker";
+                break;
+            case trackersrv.DeviceTypes.NETMODULE:
+                trackerDBEntry.deviceType = "NetModule";
+                break;
+
+            default:
+                trackerDBEntry.deviceType = "Unknown";
+                break;
+        }
+
         trackerDBEntry.status = "a";
         trackerDBEntry.save();
 
