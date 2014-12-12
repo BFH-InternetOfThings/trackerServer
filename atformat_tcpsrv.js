@@ -319,7 +319,10 @@ module.exports = net.createServer(function (socket) {
     // Remove the client from the list when it leaves
     socket.on('end', function () {
         module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
-        module.exports.emit("trackerDisconnected", socket);
+
+        if(socket.trackerID) {
+            module.exports.emit("trackerDisconnected", socket);
+        }
     });
 
     /*
