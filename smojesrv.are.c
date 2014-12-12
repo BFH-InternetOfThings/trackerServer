@@ -134,6 +134,15 @@ while(1) {
                 send(sock, "ERROR:VEXT\n");
             }
         }
+        else if (left(msg,9) == "AT$STATUS") {
+            if (right(left(msg,10),1) == "?") { // read VEXT
+                send(sock, "OK:STATUS\n");
+                // TODO
+                send(sock, strcat("$STATUS=none\n"));
+            } else if (substr(msg,10,1) == "=") { // write Status
+                send(sock, "ERROR:STATUS\n");
+            }
+        }
         else {
             printf("Got unknown message: %s\n", msg);
         }

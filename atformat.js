@@ -293,7 +293,11 @@ atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, descri
     },
 
 }); */
+// NetModule specific commands
 atFormat.CommandList.push({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" });
+atFormat.CommandList.push({ name: "STATUS", dataLines: 1, readOnly: false, description: "NetModule: get a status field" });
+
+
 atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "APN", dataLines: 1, readOnly: false, description: "ToDo" });
