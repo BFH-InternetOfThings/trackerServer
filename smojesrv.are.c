@@ -82,7 +82,7 @@ while(1) {
 			exit(4);
 		}
 		else if (left(msg,2) == strcat(chr(250),chr(249))) {
-		    printf("Server send Heartbeat confirmation!\n");
+		    printf("Server sent Heartbeat confirmation!\n");
 		}
 		else if (left(msg,8) == "AT$MODID") {
             if (right(left(msg,9),1) == "?") { // read modid
