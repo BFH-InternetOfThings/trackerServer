@@ -295,8 +295,31 @@ atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, descri
 }); */
 // NetModule specific commands
 atFormat.CommandList.push({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" });
-atFormat.CommandList.push({ name: "STATUS", dataLines: 1, readOnly: false, description: "NetModule: get a status field" });
-
+atFormat.CommandList.push({ name: "WANSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get wan status",
+    parseResponse: function(rawResponseData) {
+        var parts = rawResponseData[0].split(",");
+        //$WANSTATUS=WANLINK1_GATEWAY, WANLINK1_STATE, WANLINK1_STATE_UP_SINCE, WANLINK1_DIAL_ATTEMPTS, WANLINK1_DATA_UPLOADED, WANLINK1_DIAL_SUCCESS, WANLINK1_ADDRESS, WANLINK1_DOWNLOAD_RATE, WANLINK1_SERVICE_TYPE, WANLINK1_UPLOAD_RATE, WANLINK1_TYPE,
+        // WANLINK1_DIAL_FAILURES, WANLINK1_REGISTRATION_STATE, WANLINK1_SIM, WANLINK1_INTERFACE, WANLINK1_DATA_DOWNLOADED, WAN_HOTLINK, WANLINK1_SIGNAL_STRENGTH
+        return {    WANLINK1_GATEWAY: parts[0],
+                    WANLINK1_STATE: parts[1],
+                    WANLINK1_STATE_UP_SINCE: parts[2],
+                    WANLINK1_DIAL_ATTEMPTS: parts[3],
+                    WANLINK1_DATA_UPLOADED: parts[4],
+                    WANLINK1_DIAL_SUCCESS: parts[5],
+                    WANLINK1_ADDRESS: parts[6],
+                    WANLINK1_DOWNLOAD_RATE: parts[7],
+                    WANLINK1_SERVICE_TYPE: parts[8],
+                    WANLINK1_UPLOAD_RATE: parts[9],
+                    WANLINK1_TYPE: parts[10],
+                    WANLINK1_DIAL_FAILURES: parts[11],
+                    WANLINK1_REGISTRATION_STATE: parts[12],
+                    WANLINK1_SIM: parts[13],
+                    WANLINK1_INTERFACE: parts[14],
+                    WANLINK1_DATA_DOWNLOADED: parts[15],
+                    WAN_HOTLINK: parts[16],
+                    WANLINK1_SIGNAL_STRENGTH: parts[17]
+             };
+    } });
 
 atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
 atFormat.CommandList.push({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" });
@@ -382,6 +405,11 @@ atFormat.ATCommandReturnCode = {
     SUCCESSFULLY_FINISHED: 1,
     UNKNOWN_DATA:   0,
     WRONG_COMMAND: -1
+};
+
+atFormat.DeviceTypes = {
+    CAREU1_TRACKER: 1,
+    NETMODULE: 2
 };
 
 atFormat.AtCommand = function(command, newValue, callback) {

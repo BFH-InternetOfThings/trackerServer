@@ -17,6 +17,7 @@ module.exports = net.createServer(function (socket) {
     socket.trackerID = null;
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
+    socket.deviceType = null;
 
     socket.sendCommand = function (newCommand) {
 
@@ -177,6 +178,7 @@ module.exports = net.createServer(function (socket) {
 
                 var asciiAck = atFormat.atASCIIAcknowledge.parse(data);
 
+                socket.deviceType = atFormat.DeviceTypes.CAREU1_TRACKER;
                 socket.isASCIIFormat = true;
 
                 socket._setTrackerID(asciiAck.modemID);
@@ -198,6 +200,7 @@ module.exports = net.createServer(function (socket) {
                 var sequenceID = S(data.toString('ascii', 2, 4)).toInteger();
                 var modemID = S(data.toString('ascii', 4)).toInteger();
 
+                socket.deviceType = atFormat.DeviceTypes.NETMODULE;
                 socket.isASCIIFormat = true;
 
                 socket._setTrackerID(modemID);

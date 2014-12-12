@@ -2,6 +2,7 @@ server = "tracker.xrj.ch";
 port = (int) "9090";
 smojeid = argv[1]; // ID: erstes Argument des Scriptes
 
+
 heartbeatmessage = strcat(chr(250),chr(249),right( strcat("00", 1), 2),right( strcat("0000", smojeid), 4));
 SOCKET_TIMEOUT = 300;
 
@@ -134,13 +135,13 @@ while(1) {
                 send(sock, "ERROR:VEXT\n");
             }
         }
-        else if (left(msg,9) == "AT$STATUS") {
-            if (right(left(msg,10),1) == "?") { // read VEXT
-                send(sock, "OK:STATUS\n");
-                // TODO
-                send(sock, strcat("$STATUS=none\n"));
-            } else if (substr(msg,10,1) == "=") { // write Status
-                send(sock, "ERROR:STATUS\n");
+        else if (left(msg,12) == "AT$WANSTATUS") {
+            if (right(left(msg,12),1) == "?") { // read VEXT
+                send(sock, "OK:WANSTATUS\n");
+                state = nb_status("wan");
+                send(sock, strcat("$STATUS=",struct_get(state , "WANLINK1_GATEWAY"),",",struct_get(state , "WANLINK1_STATE"),",",struct_get(state , "WANLINK1_STATE_UP_SINCE"),",",struct_get(state , "WANLINK1_DIAL_ATTEMPTS"),",",struct_get(state , "WANLINK1_DATA_UPLOADED"),",",struct_get(state , "WANLINK1_DIAL_SUCCESS"),",",struct_get(state , "WANLINK1_ADDRESS"),",",struct_get(state , "WANLINK1_DOWNLOAD_RATE"),",",struct_get(state , "WANLINK1_SERVICE_TYPE"),",",struct_get(state , "WANLINK1_UPLOAD_RATE"),",",struct_get(state , "WANLINK1_TYPE"),",",struct_get(state , "WANLINK1_DIAL_FAILURES"),",",struct_get(state , "WANLINK1_REGISTRATION_STATE"),",",struct_get(state , "WANLINK1_SIM"),",",struct_get(state , "WANLINK1_INTERFACE"),",",struct_get(state , "WANLINK1_DATA_DOWNLOADED"),",",struct_get(state , "WAN_HOTLINK"),",",struct_get(state , "WANLINK1_SIGNAL_STRENGTH"),"\n"));
+            } else if (substr(msg,12,1) == "=") { // write Status
+                send(sock, "ERROR:WANSTATUS\n");
             }
         }
         else {
