@@ -1,7 +1,14 @@
 server = "tracker.xrj.ch";
 port = (int) "9090";
-smojeid = argv[1]; // ID: erstes Argument des Scriptes
+// SmojeID
+sArName = explode(nb_config_get("network.hostname"));
+smojedd = "";
 
+for (i = 0; i < length(sArName); i++) {
+    if (isdigit(sArName[i])) {
+        smojedd = strcat(smojeid,sArName[i]);
+    }
+}
 
 heartbeatmessage = strcat(chr(250),chr(249),right( strcat("00", 1), 2),right( strcat("0000", smojeid), 4));
 SOCKET_TIMEOUT = 300;
