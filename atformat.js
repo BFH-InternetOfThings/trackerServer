@@ -303,21 +303,21 @@ atFormat.CommandList.push({ name: "WANSTATUS", dataLines: 1, readOnly: false, de
         return {    WANLINK1_GATEWAY: parts[0],
                     WANLINK1_STATE: parts[1],
                     WANLINK1_STATE_UP_SINCE: parts[2],
-                    WANLINK1_DIAL_ATTEMPTS: parts[3],
-                    WANLINK1_DATA_UPLOADED: parts[4],
-                    WANLINK1_DIAL_SUCCESS: parts[5],
+                    WANLINK1_DIAL_ATTEMPTS: S(parts[3]).toInteger(),
+                    WANLINK1_DATA_UPLOADED: S(parts[4]).toInteger(),
+                    WANLINK1_DIAL_SUCCESS: S(parts[5]).toInteger(),
                     WANLINK1_ADDRESS: parts[6],
-                    WANLINK1_DOWNLOAD_RATE: parts[7],
+                    WANLINK1_DOWNLOAD_RATE: S(parts[7]).toInteger(),
                     WANLINK1_SERVICE_TYPE: parts[8],
-                    WANLINK1_UPLOAD_RATE: parts[9],
+                    WANLINK1_UPLOAD_RATE: S(parts[9]).toInteger(),
                     WANLINK1_TYPE: parts[10],
-                    WANLINK1_DIAL_FAILURES: parts[11],
+                    WANLINK1_DIAL_FAILURES: S(parts[11]).toInteger(),
                     WANLINK1_REGISTRATION_STATE: parts[12],
                     WANLINK1_SIM: parts[13],
                     WANLINK1_INTERFACE: parts[14],
-                    WANLINK1_DATA_DOWNLOADED: parts[15],
+                    WANLINK1_DATA_DOWNLOADED: S(parts[15]).toInteger(),
                     WAN_HOTLINK: parts[16],
-                    WANLINK1_SIGNAL_STRENGTH: parts[17]
+                    WANLINK1_SIGNAL_STRENGTH: S(parts[17]).toInteger()
              };
     } });
 
