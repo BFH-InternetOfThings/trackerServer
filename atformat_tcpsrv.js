@@ -90,6 +90,7 @@ module.exports = net.createServer(function (socket) {
             if(sentIdChangedMessage && !sentConnectedMessage) module.exports.emit("trackerIdChanged", socket, oldId);
         }
         else {
+            console.log("Connected device sent no or an invalid id, aborting connection...");
             socket.end();
         }
     };
