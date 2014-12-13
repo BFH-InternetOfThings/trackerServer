@@ -281,44 +281,58 @@ atFormat.CommandList.push({ name: "SNDGA", dataLines: 0, readOnly: false, descri
 atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
                                                 successHandler: function(tracker, commandObj) {
                                                     if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
-                                                        tracker._setTrackerID(commandObj.newValue, false)
+                                                        tracker._setTrackerID(commandObj.newValue)
                                                     }
                                                 }});
-/* atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
-    parseResponse: function(rawResponseData) {
-        return { moduleID: rawResponseData[0] };
-    },
-    getRawStringValue: function(newValueObject) {
-        return newValueObject.modid;
-    },
 
-}); */
 // NetModule specific commands
 atFormat.CommandList.push({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" });
 atFormat.CommandList.push({ name: "WANSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get wan status",
     parseResponse: function(rawResponseData) {
         var parts = rawResponseData[0].split(",");
-        //$WANSTATUS=WANLINK1_GATEWAY, WANLINK1_STATE, WANLINK1_STATE_UP_SINCE, WANLINK1_DIAL_ATTEMPTS, WANLINK1_DATA_UPLOADED, WANLINK1_DIAL_SUCCESS, WANLINK1_ADDRESS, WANLINK1_DOWNLOAD_RATE, WANLINK1_SERVICE_TYPE, WANLINK1_UPLOAD_RATE, WANLINK1_TYPE,
+        //$WANSTATUS=time, WANLINK1_GATEWAY, WANLINK1_STATE, WANLINK1_STATE_UP_SINCE, WANLINK1_DIAL_ATTEMPTS, WANLINK1_DATA_UPLOADED, WANLINK1_DIAL_SUCCESS, WANLINK1_ADDRESS, WANLINK1_DOWNLOAD_RATE, WANLINK1_SERVICE_TYPE, WANLINK1_UPLOAD_RATE, WANLINK1_TYPE,
         // WANLINK1_DIAL_FAILURES, WANLINK1_REGISTRATION_STATE, WANLINK1_SIM, WANLINK1_INTERFACE, WANLINK1_DATA_DOWNLOADED, WAN_HOTLINK, WANLINK1_SIGNAL_STRENGTH
-        return {    WANLINK1_GATEWAY: parts[0],
-                    WANLINK1_STATE: parts[1],
-                    WANLINK1_STATE_UP_SINCE: parts[2],
-                    WANLINK1_DIAL_ATTEMPTS: S(parts[3]).toInteger(),
-                    WANLINK1_DATA_UPLOADED: S(parts[4]).toInteger(),
-                    WANLINK1_DIAL_SUCCESS: S(parts[5]).toInteger(),
-                    WANLINK1_ADDRESS: parts[6],
-                    WANLINK1_DOWNLOAD_RATE: S(parts[7]).toInteger(),
-                    WANLINK1_SERVICE_TYPE: parts[8],
-                    WANLINK1_UPLOAD_RATE: S(parts[9]).toInteger(),
-                    WANLINK1_TYPE: parts[10],
-                    WANLINK1_DIAL_FAILURES: S(parts[11]).toInteger(),
-                    WANLINK1_REGISTRATION_STATE: parts[12],
-                    WANLINK1_SIM: parts[13],
-                    WANLINK1_INTERFACE: parts[14],
-                    WANLINK1_DATA_DOWNLOADED: S(parts[15]).toInteger(),
-                    WAN_HOTLINK: parts[16],
-                    WANLINK1_SIGNAL_STRENGTH: S(parts[17]).toInteger()
+        return {    deviceTime: parts[0],
+                    WANLINK1_GATEWAY: parts[1],
+                    WANLINK1_STATE: parts[2],
+                    WANLINK1_STATE_UP_SINCE: parts[3],
+                    WANLINK1_DIAL_ATTEMPTS: S(parts[4]).toInteger(),
+                    WANLINK1_DATA_UPLOADED: S(parts[5]).toInteger(),
+                    WANLINK1_DIAL_SUCCESS: S(parts[6]).toInteger(),
+                    WANLINK1_ADDRESS: parts[7],
+                    WANLINK1_DOWNLOAD_RATE: S(parts[8]).toInteger(),
+                    WANLINK1_SERVICE_TYPE: parts[9],
+                    WANLINK1_UPLOAD_RATE: S(parts[10]).toInteger(),
+                    WANLINK1_TYPE: parts[11],
+                    WANLINK1_DIAL_FAILURES: S(parts[12]).toInteger(),
+                    WANLINK1_REGISTRATION_STATE: parts[13],
+                    WANLINK1_SIM: parts[14],
+                    WANLINK1_INTERFACE: parts[15],
+                    WANLINK1_DATA_DOWNLOADED: S(parts[16]).toInteger(),
+                    WAN_HOTLINK: parts[17],
+                    WANLINK1_SIGNAL_STRENGTH: S(parts[18]).toInteger()
              };
+    } });
+
+atFormat.CommandList.push({ name: "GPSSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get gps status",
+    parseResponse: function(rawResponseData) {
+        var parts = rawResponseData[0].split(",");
+        //$GPSSTATUS=time,gpsSystem,moduleType,longitude,latitude,altitude,hdop,vdop,pdop,satellitesUsed,satellitesInView,verticalSpeed,horizontalSpeed
+        return {
+            deviceTime: parts[0],
+            gpsSystem: parts[1],
+            moduleType: parts[2],
+            longitude: parts[3],
+            latitude: parts[4],
+            altitude: parts[5],
+            hdop: parts[6],
+            vdop: parts[7],
+            pdop: parts[8],
+            satellitesUsed: parts[9],
+            satellitesInView: parts[10],
+            verticalSpeed: parts[11],
+            horizontalSpeed: parts[12]
+        };
     } });
 
 atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
@@ -547,7 +561,8 @@ atFormat.AtCommand = function(command, newValue, callback) {
     // return true if one more line is expected, otherwise false
     this.parseLine = function(line)
     {
-        var dataLine = line.toString().match(/^(\$|OK:|ERROR:)([\w\d]+)=?(.*)/i);
+        var dataLine;
+        dataLine = line.toString().match(/^(\$|OK:|ERROR:)([\w\d]+)=?(.*)/i);
 
         if(!dataLine) {
             console.log("Unknown command data: ", dataLine);
@@ -564,7 +579,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
         if(dataLine[1] === "OK:" || dataLine[1] === "ERROR:") {
             // we got a header
             self.result = dataLine[1] === "OK:";
-            if(!self.result) self.errortext = "Tracker returned ERROR";
+            if(!self.result) self.errortext = "Tracker returned " + dataLine[1];
         }
         else {
             // we got a data line

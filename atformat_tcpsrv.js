@@ -74,7 +74,7 @@ module.exports = net.createServer(function (socket) {
         }
     };
 
-    socket._setTrackerID = function(id, closeOnInvalidID) {
+    socket._setTrackerID = function(id) {
         var idString = S(id);
 
         if(!idString.isEmpty() && idString.isNumeric()) {
@@ -176,7 +176,7 @@ module.exports = net.createServer(function (socket) {
                 socket.deviceType = atFormat.DeviceTypes.CAREU1_TRACKER;
                 socket.isASCIIFormat = true;
 
-                socket._setTrackerID(asciiAck.modemID, false);
+                socket._setTrackerID(asciiAck.modemID);
 
                 // answer handshake
                 socket.write(data);
@@ -196,7 +196,7 @@ module.exports = net.createServer(function (socket) {
                 socket.deviceType = atFormat.DeviceTypes.NETMODULE;
                 socket.isASCIIFormat = true;
 
-                socket._setTrackerID(modemID, false);
+                socket._setTrackerID(modemID);
 
                 module.exports.emit('heartbeatReceived', socket, sequenceID);
 
@@ -241,19 +241,19 @@ module.exports = net.createServer(function (socket) {
 
                 if (packet.message.messageID == 0xAB) {
                     // heartbeat
-                    socket._setTrackerID(modemIDOrIMEI, false);
+                    socket._setTrackerID(modemIDOrIMEI);
 
                     module.exports.emit('heartbeatReceived', socket, packet.transactionID);
                 }
                 else {
 
                     // handle the annoying 24-bit signed integer for altitude
+                    // convert to a 32 bit integer (signed / unsigned) and then divide last 8 bits away
                     var altitudeBuffer = new Buffer([packet.message.data.altitude1, packet.message.data.altitude2, packet.message.data.altitude3, 0x00]);
-                    var altitude = altitudeBuffer.readInt32BE(0) / Math.pow(2, 8); // convert to a 32 bit integer (signed / unsigned) and then divide last 8 bits away
+                    var altitude = altitudeBuffer.readInt32BE(0) / Math.pow(2, 8);
 
                     // GPS Position
                     var gpsObj = {
-                        modemIDorIMEI: modemIDOrIMEI,
                         devicetime: atFormat.getMomentFromBinaryObject(packet.message.data.rtc).toDate(),
                         gpstime: atFormat.getMomentFromBinaryObject(packet.message.data.gps).toDate(),
                         latitude: packet.message.data.latitude / 100000,
@@ -278,35 +278,29 @@ module.exports = net.createServer(function (socket) {
 
             case 0x02: //atFormat.atAsyncTextMessage, // Text
 
-                var txtObj = {
+                module.exports.emit('TxtDataReceived', socket, {
                     textMessage: packet.message.textMessage,
                     deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
-                };
-
-                module.exports.emit('TxtDataReceived', socket, txtObj);
+                });
                 return;
 
             case 0x03: //atFormat.atAsyncTextMessage, // Garmin
 
-                var txtObj = {
+                module.exports.emit('GarminDataReceived', socket, {
                     textMessage: packet.message.textMessage,
                     deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
-                };
-
-                module.exports.emit('GarminDataReceived', socket, txtObj);
+                });
                 return;
 
             case 0x04: //atFormat.atAsyncTextMessage  // OBD
 
-                var txtObj = {
+                module.exports.emit('OBDDataReceived', socket, {
                     textMessage: packet.message.textMessage,
                     deviceTime: atFormat.getMomentFromBinaryObject(packet.message.rtc).toDate(),
                     posSendingTime: atFormat.getMomentFromBinaryObject(packet.message.posSending).toDate()
-                };
-
-                module.exports.emit('OBDDataReceived', socket, txtObj);
+                });
                 return;
         }
 
