@@ -331,6 +331,24 @@ module.exports = net.createServer(function (socket) {
     module.exports.clients.push(socket);
 });
 
+
+module.exports.onCommand = function(command, eventtype, callback) {
+    var i;
+    for(i = 0; i < atFormat.CommandList.length; i++) {
+        if(atFormat.CommandList[i].isCommand(command)) {
+            atFormat.CommandList[i].on(eventtype, callback);
+            return atFormat.CommandList[i];
+        }
+    }
+    return null;
+};
+
+module.exports.onCommand('MODID', 'onSuccess', function(tracker, commandObj) {
+    if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
+        tracker._setTrackerID(commandObj.newValue)
+    }
+});
+
 module.exports.clients = [];
 
 module.exports.AtCommand = atFormat.AtCommand;

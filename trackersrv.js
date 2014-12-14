@@ -65,6 +65,18 @@ var getStatusNetModule = function(tracker) {
         tracker.trackerDBEntry.addLogEntry('Updated netModule WAN Status');
         debug('Updated netModule WAN Status');
 
+        tracker.sendCommand(new trackersrv.AtCommand("gpsstatus", null, function(err, tracker2, response, timeUsedInMS) {
+            if(err) {
+                debug('Error on updating NetModule GPSSTATUS: ', err);
+                return;
+            }
+
+            tracker.trackerDBEntry.lastPosition = response;
+            tracker.trackerDBEntry.save();
+
+            tracker.trackerDBEntry.addLogEntry('Updated netModule GPS Status');
+            debug('Updated netModule GPS Status');
+        }));
     }));
 };
 
@@ -134,7 +146,7 @@ trackersrv.on('trackerConnected', function(tracker) {
         tracker.trackerDBEntry.addLogEntry(null, 'Tracker connected');
 
         if(tracker.deviceType = trackersrv.DeviceTypes.NETMODULE) {
-            tracker.trackerAbfrageIntervall = setInterval(getStatusNetModule, 2 * 60 * 1000, tracker);
+            tracker.trackerAbfrageIntervall = setInterval(getStatusNetModule, 10 * 1000, tracker);
         }
         else {
             tracker.trackerAbfrageIntervall = setInterval(getStatusCareU1, 2 * 60 * 1000, tracker);

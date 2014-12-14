@@ -229,6 +229,10 @@ function AtCommandDefinition(arg) {
         return commandname == self.config.name;
     };
 
+    this.getName = function() {
+        return self.config.name;
+    };
+
     this.isReadOnly = function() {
         return !!self.config.readOnly;
     };
@@ -237,8 +241,16 @@ function AtCommandDefinition(arg) {
         return self.config.dataLines;
     };
 
-    this.getDescription = function() {
-        return self.config.description;
+    this.getCommandString = function(rawNewValue) {
+        return "AT$" + self.getName() + ( S(rawNewValue).isEmpty() ? "?" : "=" + rawNewValue ) + "\n";
+    };
+
+    this.getRawStringValue = function(objectValue) {
+        return self.config.getRawStringValue !== undefined && self.config.getRawStringValue !== null ? self.config.getRawStringValue(objectValue) : objectValue.toString();
+    };
+
+    this.parseResponse = function(commandObj, rawResponseArray) {
+        self.config.parseResponse !== undefined && self.config.parseResponse !== null ? self.config.parseResponse(commandObj, rawResponseArray) : rawResponseArray.join('\n');
     };
 
     this.callFailureHandlers = function(tracker, command) {
@@ -249,7 +261,6 @@ function AtCommandDefinition(arg) {
         this.emit('onSuccess', tracker, command);
     };
 }
-
 AtCommandDefinition.prototype.__proto__ = events.EventEmitter.prototype;
 
 /*
@@ -264,31 +275,33 @@ frontDoor.open();
 atFormat.CommandList = [];
 
 // Type Zero = zero data line, only command response line
-atFormat.CommandList.push({ name: "REBOOT", dataLines: 0, readOnly: true, description: "reboot device" });
-atFormat.CommandList.push({ name: "RESET", dataLines: 0, readOnly: true, description: "reset device to factory default" });
-atFormat.CommandList.push({ name: "MSGQCL", dataLines: 0, readOnly: false, description: "Clear message queue" });
-atFormat.CommandList.push({ name: "SAVE", dataLines: 0, readOnly: true, description: "Save settings to permanent storage. Without save all changes will be lost at next reboot!" });
-atFormat.CommandList.push({ name: "WIRETAP", dataLines: 0, readOnly: false, description: "Establish a voice wiretap connection from device to a specific phone number." });
-atFormat.CommandList.push({ name: "CALL", dataLines: 0, readOnly: false, description: "Make a call out" });
-atFormat.CommandList.push({ name: "ANSWER", dataLines: 0, readOnly: true, description: "Answer an incoming call" });
-atFormat.CommandList.push({ name: "HANGUP", dataLines: 0, readOnly: true, description: "Hangup a call" });
-atFormat.CommandList.push({ name: "SNDTXT", dataLines: 0, readOnly: false, description: "Send text message from device to server" });
-atFormat.CommandList.push({ name: "SPSNDTXT", dataLines: 0, readOnly: false, description: "Send text message to specified serial port" });
-atFormat.CommandList.push({ name: "CODE", dataLines: 0, readOnly: false, description: "Send barcode reader data" });
-atFormat.CommandList.push({ name: "SNDGA", dataLines: 0, readOnly: false, description: "Send text message for Garmin GPRS" });
+atFormat.CommandList.push(new AtCommandDefinition({ name: "REBOOT", dataLines: 0, readOnly: true, description: "reboot device" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "RESET", dataLines: 0, readOnly: true, description: "reset device to factory default" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "MSGQCL", dataLines: 0, readOnly: false, description: "Clear message queue" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SAVE", dataLines: 0, readOnly: true, description: "Save settings to permanent storage. Without save all changes will be lost at next reboot!" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "WIRETAP", dataLines: 0, readOnly: false, description: "Establish a voice wiretap connection from device to a specific phone number." }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "CALL", dataLines: 0, readOnly: false, description: "Make a call out" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "ANSWER", dataLines: 0, readOnly: true, description: "Answer an incoming call" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "HANGUP", dataLines: 0, readOnly: true, description: "Hangup a call" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SNDTXT", dataLines: 0, readOnly: false, description: "Send text message from device to server" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SPSNDTXT", dataLines: 0, readOnly: false, description: "Send text message to specified serial port" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "CODE", dataLines: 0, readOnly: false, description: "Send barcode reader data" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SNDGA", dataLines: 0, readOnly: false, description: "Send text message for Garmin GPRS" }));
 
 // Commands with one Data line for question, only command response line on error or for set
-atFormat.CommandList.push({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id",
-                                                successHandler: function(tracker, commandObj) {
-                                                    if(!commandObj.isReadCommand() && !S(commandObj.newValue).isEmpty()) {
-                                                        tracker._setTrackerID(commandObj.newValue)
-                                                    }
-                                                }});
+atFormat.CommandList.push(new AtCommandDefinition({ name: "MODID", dataLines: 1, readOnly: false, description: "Get/sets the module id"}));
 
 // NetModule specific commands
-atFormat.CommandList.push({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" });
-atFormat.CommandList.push({ name: "WANSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get wan status",
-    parseResponse: function(rawResponseData) {
+atFormat.CommandList.push(new AtCommandDefinition({ name: "RELAY", dataLines: 1, readOnly: false, description: "NetModule: Switches the relay" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "WANSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get wan status",
+    parseResponse: function(commandObj, rawResponseData) {
+
+        console.log("WAN Status: ", rawResponseData);
+
+        if(rawResponseData.length == 0) {
+            return {};
+        }
+
         var parts = rawResponseData[0].split(",");
         //$WANSTATUS=time, WANLINK1_GATEWAY, WANLINK1_STATE, WANLINK1_STATE_UP_SINCE, WANLINK1_DIAL_ATTEMPTS, WANLINK1_DATA_UPLOADED, WANLINK1_DIAL_SUCCESS, WANLINK1_ADDRESS, WANLINK1_DOWNLOAD_RATE, WANLINK1_SERVICE_TYPE, WANLINK1_UPLOAD_RATE, WANLINK1_TYPE,
         // WANLINK1_DIAL_FAILURES, WANLINK1_REGISTRATION_STATE, WANLINK1_SIM, WANLINK1_INTERFACE, WANLINK1_DATA_DOWNLOADED, WAN_HOTLINK, WANLINK1_SIGNAL_STRENGTH
@@ -312,11 +325,19 @@ atFormat.CommandList.push({ name: "WANSTATUS", dataLines: 1, readOnly: false, de
                     WAN_HOTLINK: parts[17],
                     WANLINK1_SIGNAL_STRENGTH: S(parts[18]).toInteger()
              };
-    } });
+    } }));
 
-atFormat.CommandList.push({ name: "GPSSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get gps status",
-    parseResponse: function(rawResponseData) {
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSSTATUS", dataLines: 1, readOnly: false, description: "NetModule: get gps status",
+    parseResponse: function(commandObj, rawResponseData) {
+
+        console.log("GPS Status: ", rawResponseData);
+
+        if(rawResponseData.length == 0) {
+            return {};
+        }
+
         var parts = rawResponseData[0].split(",");
+
         //$GPSSTATUS=time,gpsSystem,moduleType,longitude,latitude,altitude,hdop,vdop,pdop,satellitesUsed,satellitesInView,verticalSpeed,horizontalSpeed
         return {
             deviceTime: parts[0],
@@ -333,89 +354,89 @@ atFormat.CommandList.push({ name: "GPSSTATUS", dataLines: 1, readOnly: false, de
             verticalSpeed: parts[11],
             horizontalSpeed: parts[12]
         };
-    } });
+    } }));
 
-atFormat.CommandList.push({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "APN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SMSDST", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SMSLST", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "LSTLIMIT", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SMSCFG", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GPRSEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IPTYPE", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "BAND", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "POLC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GSMJDC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "FORMAT", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "HB", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "RETRY", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "NETCFG", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "PACKAGE", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "BAUD", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "FILTER", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "ODO", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "URL", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GPSPT", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "PKEY", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "OKEY", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "DNS", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "MSGQ", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "VEXT", dataLines: 1, readOnly: true, description: "Get external voltage in mV" });
-atFormat.CommandList.push({ name: "VBAT", dataLines: 1, readOnly: true, description: "Get battery voltage in mV" });
-atFormat.CommandList.push({ name: "VERSION", dataLines: 1, readOnly: true, description: "Get firmware version and device info" ,
-                                                parseResponse: function(rawResponseData) {
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PIN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PINEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "APN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SMSDST", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SMSLST", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "LSTLIMIT", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SMSCFG", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GPRSEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IPTYPE", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "BAND", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "POLC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GSMJDC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "FORMAT", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "HB", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "RETRY", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "NETCFG", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PACKAGE", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "BAUD", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "FILTER", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "ODO", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "URL", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSPT", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PKEY", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OKEY", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "DNS", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "MSGQ", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "VEXT", dataLines: 1, readOnly: true, description: "Get external voltage in mV" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "VBAT", dataLines: 1, readOnly: true, description: "Get battery voltage in mV" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "VERSION", dataLines: 1, readOnly: true, description: "Get firmware version and device info" ,
+                                                parseResponse: function(commandObj, rawResponseData) {
 
                                                     if(rawResponseData.length == 0) return null;
 
                                                     var parts = rawResponseData[0].split(",");
                                                     //$VERSION=<FW Version>,<HW Version>,<GSM Version> }
                                                     return { firmwareVersion: parts[0], hardwareVersion: parts[1], gsmVersion: parts[2], deviceType: parts[3] };
-                                                } });
-atFormat.CommandList.push({ name: "QUST", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IMEI", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IP", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SMID", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SIMID", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "PWRM", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "MIC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SPK", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SPKMUTE", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "VOICE", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "ICL", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "OGL", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "RFIDC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IDRM", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IBDETEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "TAG", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "FUEL", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SNDOBD", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "OBDEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "OBDRPT", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "OBDGDTC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GAFUN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GADETEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GETPDS", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "PDSR", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "LPRC", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IN1", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IN1EN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IGN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "IGNEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "EGN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "EGNEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SPEED", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SPEEDEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GF", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GFEN", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "POWER", dataLines: 1, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "GPSMON", dataLines: 1, readOnly: false, description: "ToDo" });
+                                                } }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "QUST", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IMEI", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IP", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SMID", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SIMID", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PWRM", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "MIC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SPK", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SPKMUTE", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "VOICE", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "ICL", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OGL", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "RFIDC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IDRM", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IBDETEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "TAG", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "FUEL", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SNDOBD", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OBDEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OBDRPT", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OBDGDTC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GAFUN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GADETEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GETPDS", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "PDSR", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "LPRC", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IN1", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IN1EN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IGN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "IGNEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "EGN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "EGNEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SPEED", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SPEEDEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GF", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GFEN", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "POWER", dataLines: 1, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSMON", dataLines: 1, readOnly: false, description: "ToDo" }));
 
 // Type List = Ten Lines for questions, only command response line on error or for set
-atFormat.CommandList.push({ name: "HOSTS", dataLines: 10, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "POL", dataLines: 10, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "SCHED", dataLines: 10, readOnly: false, description: "ToDo" });
-atFormat.CommandList.push({ name: "RFLC", dataLines: 10, readOnly: false, description: "ToDo" });
+atFormat.CommandList.push(new AtCommandDefinition({ name: "HOSTS", dataLines: 10, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "POL", dataLines: 10, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "SCHED", dataLines: 10, readOnly: false, description: "ToDo" }));
+atFormat.CommandList.push(new AtCommandDefinition({ name: "RFLC", dataLines: 10, readOnly: false, description: "ToDo" }));
 
 atFormat.ATCommandReturnCode = {
     AWAIT_MORE_DATA: 2,
@@ -432,16 +453,15 @@ atFormat.DeviceTypes = {
 atFormat.AtCommand = function(command, newValue, callback) {
 
     var self = this;
-    self.command = !S(command).isEmpty() ? command.toString().toUpperCase() : "";
+    self.command = null; //!S(command).isEmpty() ? command.toString().toUpperCase() : "";
     self.newValue = null;
     self.sentTime = null;
     self.finishedTime = null;
 
     self.rawNewValue = null;
     self.rawResponseData = [];
-
     self.outstandingLineCount = 0;
-    self.commandDefiniton = null;
+    //self.commandDefiniton = null;
 
     self.result = false;
     self.responseData = null;
@@ -452,19 +472,22 @@ atFormat.AtCommand = function(command, newValue, callback) {
     // validate command
     var i, found = false;
 
+    command = command.toString().toUpperCase();
+
     for(i = 0; i < atFormat.CommandList.length && !found; i++) {
-        if(atFormat.CommandList[i].name === self.command) {
-            self.commandDefiniton = atFormat.CommandList[i];
+        if(atFormat.CommandList[i].isCommand(command)) {
+            self.command = atFormat.CommandList[i];
+            //self.commandDefiniton = atFormat.CommandList[i];
             found = true;
         }
     }
 
     if(!found) {
         self.errortext = "Unknown command";
-        self.command = "";
+        self.command = null;
     }
     else {
-        self.outstandingLineCount = self.commandDefiniton.dataLines + 1;
+        self.outstandingLineCount = self.command.getDataLines() + 1;
 
         if (newValue !== undefined && newValue !== null) {
 
@@ -472,11 +495,12 @@ atFormat.AtCommand = function(command, newValue, callback) {
 
             if (_.isObject(newValue)) {
 
-                self.rawNewValue = self.commandDefiniton.getRawStringValue !== undefined && self.commandDefiniton.getRawStringValue !== null ? self.commandDefiniton.getRawStringValue(newValue) : newValue.toString();
+                self.command.getRawStringValue(newValue);
+                //self.rawNewValue = self.command.getRawStringValue !== undefined && self.commandDefiniton.getRawStringValue !== null ? self.commandDefiniton.getRawStringValue(newValue) : newValue.toString();
 
                 if (!self.rawNewValue) {
                     self.errortext = "Invalid value for command " + self.command;
-                    self.command = "";
+                    self.command = null;
                 }
             }
             else {
@@ -489,14 +513,14 @@ atFormat.AtCommand = function(command, newValue, callback) {
             }
         }
 
-        if(self.newValue != null && self.commandDefiniton.readOnly === true) {
-            self.errortext = "Command " + self.command + " is a read only command. No new value can be set.";
-            self.command = "";
+        if(self.newValue != null && self.command.isReadOnly()) {
+            self.errortext = "Command " + self.command.config.name + " is a read only command. No new value can be set.";
+            self.command = null;
         }
     }
 
     this.isValid = function() {
-        return !S(self.command).isEmpty();
+        return self.command != null;
     };
 
     this.isReadCommand = function() {
@@ -504,18 +528,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
     };
 
     this.getCommandString = function() {
-        var commandString = '';
-
-        if (this.isValid()) {
-            if (this.isReadCommand()) {
-                commandString = "AT$" + self.command + "?\n";
-            }
-            else {
-                commandString = "AT$" + self.command + "=" + self.rawNewValue + "\n";
-            }
-        }
-
-        return commandString;
+        return this.isValid() ? self.command.getCommandString(self.rawNewValue) : '';
     };
 
     this.setStatusSent = function(timerObject) {
@@ -535,16 +548,14 @@ atFormat.AtCommand = function(command, newValue, callback) {
             if (self.result) {
 
                 self.result = true; // ensure boolean not null value
-                if(!this.isReadCommand()) {
-                    self.responseData = null;
-                }
-                else {
-                    self.responseData = self.commandDefiniton.parseResponse !== undefined && self.commandDefiniton.parseResponse !== null ? self.commandDefiniton.parseResponse(self.rawResponseData) : self.rawResponseData.join('\n');
-                }
+                self.responseData = self.command.parseResponse(self, self.rawResponseData);
 
+                self.command.callSuccessHandlers(tracker, self);
+
+                /*
                 if(self.commandDefiniton.successHandler !== undefined && self.commandDefiniton.successHandler !== null) {
                     self.commandDefiniton.successHandler(tracker, self);
-                }
+                }*/
 
                 self.callback(null, tracker, self.responseData, difference);
             }
@@ -552,6 +563,8 @@ atFormat.AtCommand = function(command, newValue, callback) {
                 self.result = false; // ensure boolean not null value
 
                 if(S(self.errortext).isEmpty()) self.errortext = "Unknown Error happened for command " + self.command;
+
+                self.command.callFailureHandlers(tracker, self);
 
                 self.callback(new Error(self.errortext), tracker, null, difference);
             }
@@ -572,14 +585,14 @@ atFormat.AtCommand = function(command, newValue, callback) {
         dataLine[1] = dataLine[1].toUpperCase();
         dataLine[2] = dataLine[2].toUpperCase();
 
-        if(dataLine[2] !== self.command) {
+        if(!self.command.isCommand(dataLine[2])) {
             return atFormat.ATCommandReturnCode.WRONG_COMMAND;
         }
 
         if(dataLine[1] === "OK:" || dataLine[1] === "ERROR:") {
             // we got a header
             self.result = dataLine[1] === "OK:";
-            if(!self.result) self.errortext = "Tracker returned " + dataLine[1];
+            if(!self.result) self.errortext = "Device returned " + dataLine[1];
         }
         else {
             // we got a data line
