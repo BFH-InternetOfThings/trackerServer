@@ -59,6 +59,7 @@ var getStatusNetModule = function(tracker) {
             return;
         }
 
+        console.log("lastWanStatus: ", response);
         tracker.trackerDBEntry.lastWanStatus = response;
         tracker.trackerDBEntry.save();
 
@@ -71,6 +72,7 @@ var getStatusNetModule = function(tracker) {
                 return;
             }
 
+            console.log("lastPosition: ", response);
             tracker.trackerDBEntry.lastPosition = response;
             tracker.trackerDBEntry.save();
 
@@ -146,7 +148,7 @@ trackersrv.on('trackerConnected', function(tracker) {
         tracker.trackerDBEntry.addLogEntry(null, 'Tracker connected');
 
         if(tracker.deviceType = trackersrv.DeviceTypes.NETMODULE) {
-            tracker.trackerAbfrageIntervall = setInterval(getStatusNetModule, 10 * 1000, tracker);
+            tracker.trackerAbfrageIntervall = setInterval(getStatusNetModule, 2 * 60 * 1000, tracker);
         }
         else {
             tracker.trackerAbfrageIntervall = setInterval(getStatusCareU1, 2 * 60 * 1000, tracker);
