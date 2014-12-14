@@ -122,26 +122,26 @@ while(1) {
 		    } else if (right(left(msg,9),1) == "=") {
                 // Cicle
                 if (right(left(msg,11),1) == "2" || right(left(msg,11),1) == "3") {
-                        dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), 0);
-                        sleep(2);
-                        // Long cicle
-                        if (right(left(msg,11),1) == "3") {
-                            sleep(15);
-                        }
-                        dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), 1);
-                        if (dioset == 0) {
-                            send(sock, "OK:RELAY\n");
-                            send(sock, strcat("$RELAY=",right(left(msg,10),1),":",right(left(msg,11),1),"\n"));
-                        } else {
-                            send(sock, "ERROR:RELAY");
-                        }
+                    dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), 0);
+                    sleep(2);
+                    // Long cicle
+                    if (right(left(msg,11),1) == "3") {
+                        sleep(15);
+                    }
+                    dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), 1);
+                    if (dioset == 0) {
+                        send(sock, "OK:RELAY\n");
+                        send(sock, strcat("$RELAY=",right(left(msg,10),1),":",right(left(msg,11),1),"\n"));
                     } else {
-                        dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), (int)right(left(msg,11),1));
+                        send(sock, "ERROR:RELAY");
+                    }
+                } else {
+                    dioset = nb_dio_set(strcat("out", right(left(msg,10),1)), (int)right(left(msg,11),1));
 
-                        if (dioset == 0) {
-                            send(sock, "OK:RELAY\n");
-                            send(sock, strcat("$RELAY=",right(left(msg,10),1),":",right(left(msg,11),1),"\n"));
-                        }
+                    if (dioset == 0) {
+                        send(sock, "OK:RELAY\n");
+                        send(sock, strcat("$RELAY=",right(left(msg,10),1),":",right(left(msg,11),1),"\n"));
+                    }
                 }
 			} else {
 				send(sock, "ERROR:RELAY\n");
