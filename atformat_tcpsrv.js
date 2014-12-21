@@ -18,6 +18,7 @@ module.exports = net.createServer(function (socket) {
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
     socket.deviceType = null;
+    socket.timeoutCount = 0;
 
     socket.sendCommand = function (newCommand) {
 
@@ -54,6 +55,12 @@ module.exports = net.createServer(function (socket) {
             // if the result is still null, then we didn't get a response
             // in this case quit the command from the queue
             if(!commandObj.finishedTime) {
+                socket.timeoutCount += 1;
+                if(socket.timeoutCount > 2) {
+                    debug("We got more than 2 timeouts, destroy the socket!");
+                    socket.destroy();
+                }
+
                 for (var i = 0; i < socket.commandQueue.length; i++) {
                     if( socket.commandQueue[i] == commandObj ) {
                         socket._quitCommands(i, 1, "Timeout while waiting for data for command " + commandObj.command);
@@ -165,6 +172,8 @@ module.exports = net.createServer(function (socket) {
 
     // Handle incoming messages from clients.
     socket.on('data', function(data) {
+
+        socket.timeoutCount = 0;
 
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
