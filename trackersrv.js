@@ -72,7 +72,8 @@ var getStatusNetModule = function(tracker) {
                 return;
             }
 
-            if(response.longitude == null || S(response.longitude).isEmpty() || S(response.latitude).isEmpty() || S(response.longitude).contains('n/a') || S(response.longitude).contains('n/a') ) {
+            if(response.longitude == null || S(response.longitude).isEmpty() || S(response.latitude).isEmpty() || S(response.longitude).contains('n/a') || S(response.latitude).contains('n/a') ) {
+                console.log("Rejected invalid GPS");
                 debug('Error on updating NetModule GPSSTATUS: No GPS Position available');
                 return;
             }
