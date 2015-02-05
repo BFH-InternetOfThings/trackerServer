@@ -71,6 +71,11 @@ var getStatusNetModule = function(tracker) {
                 return;
             }
 
+            if(response.longitude == null || S(response.longitude).isEmpty() || S(response.latitude).isEmpty() ) {
+                debug('Error on updating NetModule GPSSTATUS: No GPS Position available');
+                return;
+            }
+
             tracker.trackerDBEntry.lastPosition = response;
             tracker.trackerDBEntry.save();
 
