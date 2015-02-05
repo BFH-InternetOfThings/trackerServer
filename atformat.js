@@ -250,7 +250,7 @@ function AtCommandDefinition(arg) {
     };
 
     this.parseResponse = function(commandObj, rawResponseArray) {
-        self.config.parseResponse !== undefined && self.config.parseResponse !== null ? self.config.parseResponse(commandObj, rawResponseArray) : rawResponseArray.join('\n');
+        return self.config.parseResponse !== undefined && self.config.parseResponse !== null ? self.config.parseResponse(commandObj, rawResponseArray) : rawResponseArray.join('\n');
     };
 
     this.callFailureHandlers = function(tracker, command) {
@@ -302,10 +302,15 @@ atFormat.CommandList.push(new AtCommandDefinition({ name: "WANSTATUS", dataLines
             return {};
         }
 
-        var parts = rawResponseData[0].split(",");
+        var parts = S(rawResponseData[0]).replaceAll('n/a','').split(",");
+
+        if(parts.length != 19) {
+            console.log("Invalid WANStatus-String (not 19 elements)", parts);
+            return {};
+        }
         //$WANSTATUS=time, WANLINK1_GATEWAY, WANLINK1_STATE, WANLINK1_STATE_UP_SINCE, WANLINK1_DIAL_ATTEMPTS, WANLINK1_DATA_UPLOADED, WANLINK1_DIAL_SUCCESS, WANLINK1_ADDRESS, WANLINK1_DOWNLOAD_RATE, WANLINK1_SERVICE_TYPE, WANLINK1_UPLOAD_RATE, WANLINK1_TYPE,
         // WANLINK1_DIAL_FAILURES, WANLINK1_REGISTRATION_STATE, WANLINK1_SIM, WANLINK1_INTERFACE, WANLINK1_DATA_DOWNLOADED, WAN_HOTLINK, WANLINK1_SIGNAL_STRENGTH
-        return {    deviceTime: parts[0],
+        return {    deviceTime: Moment(S(parts[0]).toInteger() * 1000).toDate(),
                     WANLINK1_GATEWAY: parts[1],
                     WANLINK1_STATE: parts[2],
                     WANLINK1_STATE_UP_SINCE: parts[3],
@@ -336,11 +341,15 @@ atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSSTATUS", dataLines
             return {};
         }
 
-        var parts = rawResponseData[0].split(",");
+        var parts = S(rawResponseData[0]).replaceAll('n/a','').split(",");
+        if(parts.length != 13) {
+            console.log("Invalid GPSStatus-String (not 13 elements)", parts);
+            return {};
+        }
 
         //$GPSSTATUS=time,gpsSystem,moduleType,longitude,latitude,altitude,hdop,vdop,pdop,satellitesUsed,satellitesInView,verticalSpeed,horizontalSpeed
         return {
-            deviceTime: parts[0],
+            deviceTime: Moment(S(parts[0]).toInteger() * 1000).toDate(),
             gpsSystem: parts[1],
             moduleType: parts[2],
             longitude: parts[3],
@@ -349,8 +358,8 @@ atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSSTATUS", dataLines
             hdop: parts[6],
             vdop: parts[7],
             pdop: parts[8],
-            satellitesUsed: parts[9],
-            satellitesInView: parts[10],
+            satellitesUsed: S(parts[9]).toInteger(),
+            satellitesInView: S(parts[10]).toInteger(),
             verticalSpeed: parts[11],
             horizontalSpeed: parts[12]
         };
@@ -453,7 +462,7 @@ atFormat.DeviceTypes = {
 atFormat.AtCommand = function(command, newValue, callback) {
 
     var self = this;
-    self.command = null; //!S(command).isEmpty() ? command.toString().toUpperCase() : "";
+    self.command = null;
     self.newValue = null;
     self.sentTime = null;
     self.finishedTime = null;
@@ -461,7 +470,6 @@ atFormat.AtCommand = function(command, newValue, callback) {
     self.rawNewValue = null;
     self.rawResponseData = [];
     self.outstandingLineCount = 0;
-    //self.commandDefiniton = null;
 
     self.result = false;
     self.responseData = null;
@@ -477,7 +485,6 @@ atFormat.AtCommand = function(command, newValue, callback) {
     for(i = 0; i < atFormat.CommandList.length && !found; i++) {
         if(atFormat.CommandList[i].isCommand(command)) {
             self.command = atFormat.CommandList[i];
-            //self.commandDefiniton = atFormat.CommandList[i];
             found = true;
         }
     }
@@ -495,8 +502,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
 
             if (_.isObject(newValue)) {
 
-                self.command.getRawStringValue(newValue);
-                //self.rawNewValue = self.command.getRawStringValue !== undefined && self.commandDefiniton.getRawStringValue !== null ? self.commandDefiniton.getRawStringValue(newValue) : newValue.toString();
+                self.rawNewValue = self.command.getRawStringValue(newValue);
 
                 if (!self.rawNewValue) {
                     self.errortext = "Invalid value for command " + self.command;
@@ -551,12 +557,6 @@ atFormat.AtCommand = function(command, newValue, callback) {
                 self.responseData = self.command.parseResponse(self, self.rawResponseData);
 
                 self.command.callSuccessHandlers(tracker, self);
-
-                /*
-                if(self.commandDefiniton.successHandler !== undefined && self.commandDefiniton.successHandler !== null) {
-                    self.commandDefiniton.successHandler(tracker, self);
-                }*/
-
                 self.callback(null, tracker, self.responseData, difference);
             }
             else {
@@ -565,7 +565,6 @@ atFormat.AtCommand = function(command, newValue, callback) {
                 if(S(self.errortext).isEmpty()) self.errortext = "Unknown Error happened for command " + self.command;
 
                 self.command.callFailureHandlers(tracker, self);
-
                 self.callback(new Error(self.errortext), tracker, null, difference);
             }
         }

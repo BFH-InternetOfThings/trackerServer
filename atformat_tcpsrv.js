@@ -18,6 +18,7 @@ module.exports = net.createServer(function (socket) {
     socket.commandQueue = [];
     socket.lastTransactionID = 0;
     socket.deviceType = null;
+    socket.timeoutCount = 0;
 
     socket.sendCommand = function (newCommand) {
 
@@ -54,6 +55,12 @@ module.exports = net.createServer(function (socket) {
             // if the result is still null, then we didn't get a response
             // in this case quit the command from the queue
             if(!commandObj.finishedTime) {
+                socket.timeoutCount += 1;
+                if(socket.timeoutCount > 2) {
+                    debug("We got more than 2 timeouts, destroy the socket!");
+                    socket.destroy();
+                }
+
                 for (var i = 0; i < socket.commandQueue.length; i++) {
                     if( socket.commandQueue[i] == commandObj ) {
                         socket._quitCommands(i, 1, "Timeout while waiting for data for command " + commandObj.command);
@@ -96,7 +103,7 @@ module.exports = net.createServer(function (socket) {
     };
 
     socket._quitCommands = function (startIndex, count, errorText) {
-        // it it is not the first command, all commands before it failed. Remove then and call their callbacks
+        // Remove the desired commands from the quie
         var commands = socket.commandQueue.splice(startIndex, count);
 
         for (var i = 0; i < commands.length; i++) {
@@ -165,6 +172,8 @@ module.exports = net.createServer(function (socket) {
 
     // Handle incoming messages from clients.
     socket.on('data', function(data) {
+
+        socket.timeoutCount = 0;
 
         // check for ASCII Heartbeat Message
         if (data.readUInt16BE(0) == 0xfaf8) {
@@ -312,11 +321,15 @@ module.exports = net.createServer(function (socket) {
     });
 
     // Remove the client from the list when it leaves
-    socket.on('end', function () {
+    socket.on('close', function(had_error) {
+
+        debug("Close socket for device with IP " + socket.remoteAddress + " (Device-ID: " + socket.trackerID + ")" );
+        socket._quitCommands(0, socket.commandQueue.length - 1, "Device disconnected");
+
         module.exports.clients.splice(module.exports.clients.indexOf(socket), 1);
 
         if(socket.trackerID) {
-            module.exports.emit("trackerDisconnected", socket);
+            module.exports.emit("trackerDisconnected", socket, had_error);
         }
     });
 
@@ -329,6 +342,7 @@ module.exports = net.createServer(function (socket) {
 
     // Put this new client in the list
     module.exports.clients.push(socket);
+    debug("Device with remote IP " + socket.remoteAddress + " connected!");
 });
 
 
