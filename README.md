@@ -1,4 +1,4 @@
 trackerServer
 =============
 
-Tissan Careu U1 Tracker Server written in NodeJS
+Tracker Server written in NodeJS
