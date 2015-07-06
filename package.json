@@ -39,6 +39,8 @@
         "binary-parser": "*",
         "string": "*",
         "mubsub": "1.0.4",
-        "node-uuid": "*"
+        "node-uuid": "*",
+        "mqtt": "^1.1.2",
+        "mqtt-router": "^0.5.0"
     }
 }

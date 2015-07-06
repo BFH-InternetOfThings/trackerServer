@@ -441,6 +441,9 @@ atFormat.CommandList.push(new AtCommandDefinition({ name: "GFEN", dataLines: 1, 
 atFormat.CommandList.push(new AtCommandDefinition({ name: "POWER", dataLines: 1, readOnly: false, description: "ToDo" }));
 atFormat.CommandList.push(new AtCommandDefinition({ name: "GPSMON", dataLines: 1, readOnly: false, description: "ToDo" }));
 
+
+atFormat.CommandList.push(new AtCommandDefinition({ name: "OUT", dataLines: 1, readOnly: false, description: "ToDo" }));
+
 // Type List = Ten Lines for questions, only command response line on error or for set
 atFormat.CommandList.push(new AtCommandDefinition({ name: "HOSTS", dataLines: 10, readOnly: false, description: "ToDo" }));
 atFormat.CommandList.push(new AtCommandDefinition({ name: "POL", dataLines: 10, readOnly: false, description: "ToDo" }));
@@ -564,7 +567,7 @@ atFormat.AtCommand = function(command, newValue, callback) {
 
                 if(S(self.errortext).isEmpty()) self.errortext = "Unknown Error happened for command " + self.command;
 
-                self.command.callFailureHandlers(tracker, self);
+                // self.command.callFailureHandlers(tracker, self); <-- NullPointer exception?!?!?
                 self.callback(new Error(self.errortext), tracker, null, difference);
             }
         }
